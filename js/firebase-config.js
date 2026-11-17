@@ -1,15 +1,10 @@
-// Pega aquí la configuración de tu proyecto de Firebase
-// (Consola de Firebase → Configuración del proyecto → Tus apps → Configuración del SDK).
-// Mientras sea null, la app funciona solo en este dispositivo (sin partidas compartidas).
-export const firebaseConfig = null;
-
-/* Ejemplo:
+// Configuración del proyecto de Firebase "senda-del-errante".
+// No es secreta: la seguridad la ponen las reglas de Firestore (firestore.rules).
 export const firebaseConfig = {
-  apiKey: 'AIza...',
+  apiKey: 'AIzaSyCQGPNzGXI2oDnayUAlhBkDV9nbLX0LA0w',
   authDomain: 'senda-del-errante.firebaseapp.com',
   projectId: 'senda-del-errante',
-  storageBucket: 'senda-del-errante.appspot.com',
-  messagingSenderId: '1234567890',
-  appId: '1:1234567890:web:abcdef',
+  storageBucket: 'senda-del-errante.firebasestorage.app',
+  messagingSenderId: '482312700887',
+  appId: '1:482312700887:web:b8caefd7f9208c43be4192',
 };
-*/
