@@ -344,6 +344,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       const botones = [...opciones.map((o) => ({ ...o, clase: 'rojo' })), { t: 'Sin gastar espacio', v: 0 }, { t: 'Cancelar', v: null }];
       const r = await modal(`Lanzar ${s.n}`, h('div', {},
         g && h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración' : g.du}`),
+        g && h('div.que-hace', {}, h('h4', {}, 'Qué hace'), h('p', {}, g.d), g.s ? h('p.peq', {}, h('b', {}, 'Con un espacio de nivel superior: '), g.s) : null),
         h('p', {}, opciones.length ? '¿Con qué espacio?' : 'No te quedan espacios del nivel necesario.'),
         h('p.peq', {}, '«Sin gastar espacio»: rituales, rasgos que lo permiten o usos gratuitos.')), botones);
       if (r === null || r === undefined) return;
@@ -365,7 +366,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     const m = c.magia;
     const expr = g.x ? escalarTirada(g, nivelEspacio) : null;
     const titulo = `${s.n}${nivelEspacio > s.nv ? ` (nivel ${nivelEspacio})` : ''}`;
-    const tipoDano = (g.d.match(/de (ácido|frío|fuego|fuerza|relámpago|trueno|veneno|radiante|necrótico|psíquico|perforante|cortante|contundente)/i) || [])[1] || (/necrótico/i.test(g.d) ? 'necrótico' : '');
+    const tipoDano = (g.d.match(/\d+d\d+(?:\s*\+\s*\d+)?\s+(?:de\s+)?(ácido|frío|fuego|fuerza|relámpago|trueno|veneno|radiante|necrótico|psíquico|perforante|cortante|contundente)/i) || [])[1] || '';
     let critico = false;
     const zonaDano = h('div.paso-lanz');
     const pintarDano = (activo) => {
