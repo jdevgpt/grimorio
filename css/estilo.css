@@ -545,3 +545,19 @@ details.conjuro { display: block; }
 .alm-detalle p { margin: .45em 0; }
 /* La cinta ocupa sitio: las barras fijas de pestañas bajan un poco */
 .pestanas, .secciones { top: 61px; }
+
+/* Ataques: botón de ataque y de daño bien distintos */
+.ataque { display: block; }
+.ataque-cab { display: flex; flex-direction: column; margin-bottom: .45em; }
+.ataque-cab b { font-family: var(--titulo); color: var(--lacre-2); font-size: 1.02rem; }
+.ataque-cab .props { color: var(--tinta-3); }
+.ataque-botones { display: flex; gap: .45em; flex-wrap: wrap; }
+.btn-ataque, .btn-dano { flex: 1 1 0; min-width: 6.5em; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .05em;
+  border-radius: 8px; cursor: pointer; font: inherit; padding: .35em .5em; line-height: 1.15; }
+.btn-ataque small, .btn-dano small { font-family: var(--titulo); font-size: .66rem; letter-spacing: .03em; }
+.btn-ataque b, .btn-dano b { font-family: var(--titulo); font-size: 1.15rem; }
+.btn-ataque { background: linear-gradient(180deg, #a52626, var(--lacre-2)); color: #fbeedd; border: 1px solid #4d0c0c; flex: 0 0 auto; min-width: 5.5em; }
+.btn-dano { background: linear-gradient(180deg, #fbf1d4, #ecd393); color: var(--tinta); border: 1px solid var(--oro); }
+.btn-dano small:last-child { font-family: var(--serif); font-size: .72rem; color: var(--tinta-2); }
+.btn-ataque:active, .btn-dano:active { transform: translateY(1px); }
+.btn-ataque small { color: #f6dcc0; } .btn-dano small { color: var(--tinta-2); }
