@@ -1,4 +1,4 @@
-import { h, limpiarPantalla } from './ui.js';
+import { h, limpiarPantalla, estadoDados } from './ui.js';
 import { iniciar, alCambiar, personaje, estado } from './almacen.js';
 import { vistaInicio } from './vistas/inicio.js';
 import { vistaCreador } from './vistas/creador.js';
@@ -13,6 +13,7 @@ const irA = (hash) => { if (location.hash === hash) ruta(); else location.hash =
 
 function ruta() {
   limpiarPantalla();
+  estadoDados.fisicos = false;
   const [, sec, id, sub] = (location.hash || '#/').slice(1).split('/');
   document.querySelectorAll('.nav-inf a').forEach((a) => a.classList.toggle('sel', a.dataset.sec === (sec === 'pj' || sec === 'crear' ? '' : sec || '')));
   switch (sec) {
@@ -62,7 +63,7 @@ let firmaMesa = '';
 function mesaCambiada() {
   const pid = (location.hash || '').split('/')[2];
   const p = estado.partidas.find((x) => x.id === pid);
-  const f = JSON.stringify([p?.escritores, p?.gestoresIni, p?.iniPropia, p?.miembros, p?.nombres]);
+  const f = JSON.stringify([p?.escritores, p?.gestoresIni, p?.iniPropia, p?.miembros, p?.nombres, p?.reglas?.dados]);
   const cambio = f !== firmaMesa; firmaMesa = f; return cambio;
 }
 

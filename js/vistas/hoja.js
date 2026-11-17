@@ -1,5 +1,5 @@
 // Hoja de personaje viva
-import { h, toast, toastAccion, modal, confirmar, tirarD20, mostrarTirada, estadoDados, descargar } from '../ui.js';
+import { h, textoLibre, toast, toastAccion, modal, confirmar, tirarD20, mostrarTirada, obtenerTirada, estadoDados, descargar } from '../ui.js';
 import { CARACTERISTICAS, HABILIDADES, ESTADOS, AGOTAMIENTO, IDIOMAS_ESTANDAR, IDIOMAS_RAROS, PX, fmt, mod, habilidad } from '../datos/reglas.js';
 import { CLASES, clase } from '../datos/clases.js';
 import { ESPECIES, especie } from '../datos/especies.js';
@@ -47,6 +47,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
 
   function dibujar() {
     c = calcular(pj, reglasDe(pj));
+    estadoDados.fisicos = c.reglas.dados === 'fisicos';
     const y = scrollY;
     cont.replaceChildren(
       h('div.hoja' + (ro ? '.solo-lectura' : ''), {},
@@ -73,7 +74,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       h('div.cajas', {},
         caja('CA', c.ca, c.caDesc),
         caja('Inic.', fmt(c.iniciativa), 'Tirar iniciativa', () => tirarD20(`${pj.nombre}: iniciativa`, c.iniciativa)),
-        caja('Vel.', metros(c.vel)),
+        h('div.caja', {}, h('small', {}, 'Vel.'), h('b', {}, textoLibre(metros(c.vel))), h('small.pies', {}, textoLibre(`${Math.round(c.vel / 1.5 * 5)} pies`))),
         caja('Comp.', fmt(c.pb)),
         caja('Perc. pas.', c.percepcionPasiva),
       ),
@@ -117,7 +118,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       if (act === 0) { toast('Caes inconsciente. Haz salvaciones contra muerte.'); if (pj.concentracion) { toast(`Pierdes la concentración en ${pj.concentracion}.`); pj.concentracion = null; } }
       else if (pj.concentracion) {
         const cd = Math.min(30, Math.max(10, Math.floor(n / 2)));
-        setTimeout(() => { const r = tirarD20(`Concentración (CD ${cd})`, c.salvaciones.CON.v); if (r.total < cd) toast(`Fallas: pierdes ${pj.concentracion}. Pulsa «Terminar» si así es.`, 5000); else toast('Mantienes la concentración.'); }, 200);
+        setTimeout(async () => { const r = estadoDados.fisicos ? await obtenerTirada(`Concentración (CD ${cd})`, `1d20${fmt(c.salvaciones.CON.v)}`, `Salvación de Constitución para mantener ${pj.concentracion}.`) : tirarD20(`Concentración (CD ${cd})`, c.salvaciones.CON.v); if (!r) return; if (r.total < cd) toast(`Fallas: pierdes ${pj.concentracion}. Pulsa «Terminar» si así es.`, 5000); else toast('Mantienes la concentración.'); }, 200);
       }
     } else if (tmp.querySelector('input').checked) {
       pj.pg.temp = Math.max(pj.pg.temp || 0, n);
@@ -153,7 +154,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
         !ro && h('button.btn.peq', { onclick: gastarDadoGolpe, disabled: pj.dadosGolpeGastados >= pj.nivel }, 'Gastar uno')),
       (pj.pg.actual === 0) && h('div.muerte', {}, h('h3', {}, 'Salvaciones contra muerte'),
         h('div', {}, 'Éxitos ', marcas(pj.muerte.ok, 3, (n) => { pj.muerte.ok = n; }), ' Fallos ', marcas(pj.muerte.ko, 3, (n) => { pj.muerte.ko = n; })),
-        !ro && h('button.btn.peq', { onclick: salvacionMuerte }, '🎲 Tirar salvación')),
+        !ro && h('button.btn.peq', { onclick: salvacionMuerte }, estadoDados.fisicos ? '🎲 Anotar salvación' : '🎲 Tirar salvación')),
       h('h3', {}, 'Estados'),
       h('div.chips', {}, ESTADOS.map((e) => h('button.chip' + (pj.estados.includes(e.id) ? '.sel.rojo' : ''), { title: e.d, onclick: cambio(() => { pj.estados = pj.estados.includes(e.id) ? pj.estados.filter((x) => x !== e.id) : [...pj.estados, e.id]; }) }, e.n))),
       pj.estados.length ? h('ul.lista-estados', {}, pj.estados.map((id) => { const e = ESTADOS.find((x) => x.id === id); return h('li', {}, h('b', {}, e.n + ': '), e.d); })) : null,
@@ -190,16 +191,18 @@ export function vistaHoja(cont, pjOriginal, irA) {
     );
   }
 
-  function gastarDadoGolpe() {
+  async function gastarDadoGolpe() {
     if (ro || pj.dadosGolpeGastados >= pj.nivel) return;
-    const r = mostrarTirada('Dado de golpe', `1d${c.cl.dg}${fmt(c.mod.CON)}`);
+    const r = await obtenerTirada('Dado de golpe', `1d${c.cl.dg}${fmt(c.mod.CON)}`);
+    if (!r) return;
     pj.dadosGolpeGastados = (pj.dadosGolpeGastados || 0) + 1;
     pj.pg.actual = Math.min(c.pgMax, (pj.pg.actual ?? c.pgMax) + Math.max(0, r.total));
     guardar(pj); dibujar();
   }
 
-  function salvacionMuerte() {
-    const r = tirar('1d20');
+  async function salvacionMuerte() {
+    const r = estadoDados.fisicos ? await obtenerTirada('Salvación contra muerte', '1d20', 'Escribe lo que sale en el dado, sin sumar nada.') : tirar('1d20');
+    if (!r) return;
     if (r.total === 20) { pj.pg.actual = 1; pj.muerte = { ok: 0, ko: 0 }; toast('¡20 natural! Recuperas 1 PG.'); }
     else if (r.total === 1) { pj.muerte.ko = Math.min(3, pj.muerte.ko + 2); toast('1 natural: dos fallos.'); }
     else if (r.total >= 10) { pj.muerte.ok++; toast(`${r.total}: éxito.`); }
@@ -233,7 +236,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
 
   async function subirNivel() {
     if (!c.cl) return toast('Primero elige una clase en «Editar y revisar».');
-    const aplicar = await asistenteNivel(pj, reglasDe(pj));
+    const aplicar = await asistenteNivel(pj, c.reglas);
     if (!aplicar) return;
     registrar(`Subida a nivel ${pj.nivel + 1}`);
     const antes = c.pgMax;
@@ -319,11 +322,11 @@ export function vistaHoja(cont, pjOriginal, irA) {
       const opciones = [];
       if (m?.pacto && m.pacto.nivel >= s.nv && (pj.pactoGastados || 0) < m.pacto.n) opciones.push({ t: `Espacio de pacto (nv ${m.pacto.nivel})`, v: 'p' });
       (m?.espacios || []).forEach((n, i) => { const nv = i + 1; if (nv >= s.nv && (pj.espaciosGastados[nv] || 0) < n) opciones.push({ t: `Nivel ${nv} (${n - (pj.espaciosGastados[nv] || 0)} libres)`, v: nv }); });
-      const botones = [{ t: 'Cancelar', v: null }, { t: 'Sin espacio', v: 0 }, ...opciones.map((o) => ({ ...o, clase: 'rojo' }))];
+      const botones = [...opciones.map((o) => ({ ...o, clase: 'rojo' })), { t: 'Sin gastar espacio', v: 0 }, { t: 'Cancelar', v: null }];
       const r = await modal(`Lanzar ${s.n}`, h('div', {},
         g && h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración' : g.du}`),
         h('p', {}, opciones.length ? '¿Con qué espacio?' : 'No te quedan espacios del nivel necesario.'),
-        h('p.peq', {}, '«Sin espacio»: rasgos que lo permiten, rituales o usos gratuitos.')), botones);
+        h('p.peq', {}, '«Sin gastar espacio»: rituales, rasgos que lo permiten o usos gratuitos.')), botones);
       if (r === null || r === undefined) return;
       if (r === 'p') { pj.pactoGastados = (pj.pactoGastados || 0) + 1; nivelEspacio = m.pacto.nivel; }
       else if (r > 0) { pj.espaciosGastados[r] = (pj.espaciosGastados[r] || 0) + 1; nivelEspacio = r; }

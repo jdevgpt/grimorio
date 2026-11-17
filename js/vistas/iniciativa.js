@@ -1,5 +1,5 @@
 // Tracker de iniciativa de la partida, en tiempo real
-import { h, toast, confirmar, alSalir, estadoDados, pedirTexto } from '../ui.js';
+import { h, toast, confirmar, alSalir, estadoDados, pedirTexto, obtenerTirada } from '../ui.js';
 import { tirar, calcular } from '../motor.js';
 import { fmt } from '../datos/reglas.js';
 import { conDefecto } from '../datos/opciones.js';
@@ -32,7 +32,7 @@ export function vistaIniciativa(cont, p) {
         ),
       ),
       pendientes.length && gestor ? h('div.aviso-caja', {}, h('span', {}, `${pendientes.length} sin iniciativa. `),
-        h('button.btn.peq', { onclick: tirarPendientes }, '🎲 Tirar las que faltan')) : null,
+        fisicos ? h('span.peq', {}, 'Escribid lo que saquéis en la mesa en cada casilla.') : h('button.btn.peq', { onclick: tirarPendientes }, '🎲 Tirar las que faltan')) : null,
       h('ol.ini-lista', {}, orden.map((x) => filaParticipante(x))),
       !orden.length ? h('p.peq', {}, 'Añade personajes y enemigos para empezar.') : null,
       miPersonajeUI(),
@@ -71,8 +71,10 @@ export function vistaIniciativa(cont, p) {
     await escribirEnSub(p.id, 'iniciativa', x.id, { pg: Math.max(0, Math.min(x.pgMax, x.pg + signo * n)) });
   }
 
-  const tiradaIni = (bon) => tirar(estadoDados.modo === 'ventaja' ? `2d20kh1${fmt(bon || 0)}` : estadoDados.modo === 'desventaja' ? `2d20kl1${fmt(bon || 0)}` : `1d20${fmt(bon || 0)}`).total;
-  async function tirarUno(x) { const v = tiradaIni(x.bon); await escribirEnSub(p.id, 'iniciativa', x.id, { ini: v }); toast(`${x.n}: ${v}`); }
+  const fisicos = conDefecto(p.reglas).dados === 'fisicos';
+  estadoDados.fisicos = fisicos;
+  const tiradaIni = (bon) => fisicos ? null : tirar(estadoDados.modo === 'ventaja' ? `2d20kh1${fmt(bon || 0)}` : estadoDados.modo === 'desventaja' ? `2d20kl1${fmt(bon || 0)}` : `1d20${fmt(bon || 0)}`).total;
+  async function tirarUno(x) { const v = fisicos ? (await obtenerTirada(`Iniciativa de ${x.n}`, `1d20${fmt(x.bon || 0)}`))?.total : tiradaIni(x.bon); if (v == null) return; await escribirEnSub(p.id, 'iniciativa', x.id, { ini: v }); toast(`${x.n}: ${v}`); }
   async function tirarPendientes() { for (const x of participantes.filter((y) => y.ini == null)) await escribirEnSub(p.id, 'iniciativa', x.id, { ini: tiradaIni(x.bon) }); }
 
   async function quitar(x) {
@@ -81,7 +83,7 @@ export function vistaIniciativa(cont, p) {
   }
 
   async function empezar() {
-    if (participantes.some((x) => x.ini == null)) await tirarPendientes();
+    if (participantes.some((x) => x.ini == null)) { if (fisicos) return toast('Faltan iniciativas por anotar.'); await tirarPendientes(); }
     const primero = ordenar(participantes)[0];
     await escribirEnSub(p.id, 'combate', 'estado', { activo: true, ronda: 1, turno: primero.id, inicio: Date.now() }, false);
   }
@@ -117,19 +119,20 @@ export function vistaIniciativa(cont, p) {
     return h('div.ini-mios', {}, h('h4', {}, 'Tu personaje'), mios.map((pj) => {
       const d = datosPJ(pj, p);
       return h('button.btn.rojo', { onclick: async () => {
-        const v = tiradaIni(d.bon);
+        const v = fisicos ? (await obtenerTirada(`Iniciativa de ${pj.nombre}`, `1d20${fmt(d.bon)}`))?.total : tiradaIni(d.bon);
+        if (v == null) return;
         const ya = participantes.find((y) => y.pjId === pj.id);
         if (ya) await escribirEnSub(p.id, 'iniciativa', ya.id, { ...d, ini: v });
         else await crearEnSub(p.id, 'iniciativa', { ...d, uid, ini: v, creada: Date.now() });
         toast(`${pj.nombre}: iniciativa ${v}`);
-      } }, `🎲 Tirar iniciativa de ${pj.nombre} (${fmt(d.bon)})`);
+      } }, `🎲 ${fisicos ? 'Anotar' : 'Tirar'} iniciativa de ${pj.nombre} (${fmt(d.bon)})`);
     }));
   }
 
   function formAnadir() {
     const n = h('input', { placeholder: 'Nombre (p. ej. Goblin)' });
     const bon = h('input.num', { type: 'number', placeholder: '+0', title: 'Bonificador de iniciativa' });
-    const ini = h('input.num', { type: 'number', placeholder: 'Ini.', title: 'Iniciativa (vacío = tirar)' });
+    const ini = h('input.num', { type: 'number', placeholder: 'Ini.', title: fisicos ? 'Iniciativa sacada en la mesa' : 'Iniciativa (vacío = tirar)' });
     const cant = h('input.num', { type: 'number', value: 1, min: 1, title: 'Cantidad' });
     const pg = h('input.num', { type: 'number', placeholder: 'PG', title: 'Puntos de golpe' });
     const ca = h('input.num', { type: 'number', placeholder: 'CA', title: 'Clase de armadura' });

@@ -1,5 +1,5 @@
 // Asistente de subida de nivel: muestra solo las elecciones del nivel que se gana
-import { h, modal, toast } from '../ui.js';
+import { h, modal, toast, obtenerTirada } from '../ui.js';
 import { CARACTERISTICAS, HABILIDADES, habilidad, fmt, PX } from '../datos/reglas.js';
 import { clase, INVOCACIONES_BRUJO } from '../datos/clases.js';
 import { especie } from '../datos/especies.js';
@@ -27,8 +27,12 @@ export async function asistenteNivel(pj, reglas) {
   const invoc = pj.clase === 'brujo' ? INVOCACIONES_BRUJO[nv - 1] - INVOCACIONES_BRUJO[nv - 2] : 0;
 
   const modoPG = reglas?.pgNivel || 'eleccion';
+  const fisicos = reglas?.dados === 'fisicos';
+  const tirarPG = async () => fisicos ? (await obtenerTirada(`Dado de golpe (d${cl.dg})`, `1d${cl.dg}`, 'Solo el dado, sin sumar Constitución.'))?.total : tirar(`1d${cl.dg}`).total;
+  let pgInicial = media;
+  if (modoPG === 'tirada') { const v = await tirarPG(); if (v == null) return null; pgInicial = Math.max(1, Math.min(cl.dg, v)); }
   const el = {
-    pg: modoPG === 'tirada' ? tirar(`1d${cl.dg}`).total : media, pgTirado: modoPG === 'tirada',
+    pg: pgInicial, pgTirado: modoPG === 'tirada',
     mejora: 'carac', c1: null, c2: null, dote: null, doteCarac: null,
     epico: null, epicoCarac: null, estilo: null, pericias: [], habilidades: [],
   };
@@ -41,7 +45,7 @@ export async function asistenteNivel(pj, reglas) {
     seccion('Puntos de golpe',
       modoPG === 'eleccion' ? h('div.segmentado', {},
         h('button' + (!el.pgTirado ? '.sel' : ''), { onclick: () => { el.pg = media; el.pgTirado = false; pintar(); } }, `Media (${media})`),
-        h('button' + (el.pgTirado ? '.sel' : ''), { onclick: () => { el.pg = tirar(`1d${cl.dg}`).total; el.pgTirado = true; pintar(); } }, `🎲 Tirar d${cl.dg}`)) :
+        h('button' + (el.pgTirado ? '.sel' : ''), { onclick: async () => { const v = await tirarPG(); if (v == null) return; el.pg = Math.max(1, Math.min(cl.dg, v)); el.pgTirado = true; pintar(); } }, fisicos ? `🎲 Anotar d${cl.dg}` : `🎲 Tirar d${cl.dg}`)) :
         h('p.peq', {}, modoPG === 'media' ? 'Tu DM usa siempre la media.' : 'Tu DM pide tirar el dado.'),
       h('p.grande', {}, `+${Math.max(1, el.pg + c.mod.CON) + (es?.pgExtraPorNivel || 0) + (pj.clase === 'hechicero' && nv >= 3 ? (nv === 3 ? 3 : 1) : 0)} PG`, h('small', {}, el.pgTirado ? ` (sacaste ${el.pg})` : ` (${el.pg} ${fmt(c.mod.CON)} Con)`)),
     ),

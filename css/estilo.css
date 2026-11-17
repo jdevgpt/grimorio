@@ -459,3 +459,39 @@ details.conjuro .ficha-conj { margin: .4em 0 .2em 1.6em; }
 .toast.con-accion span { flex: 1; }
 .toast.con-accion button { flex: none; padding: .45em .9em; border-radius: 8px; border: 1px solid var(--oro); background: var(--oro-2); color: var(--cuero); font-family: var(--titulo); font-weight: 700; cursor: pointer; }
 .btn.deshacer { border-color: var(--oro); background: linear-gradient(180deg, #fff3cf, #ecd393); }
+
+/* Botones de los diálogos: siempre caben en el móvil */
+.modal-botones { flex-wrap: wrap; }
+.modal-botones .btn { flex: 1 1 auto; min-height: 44px; }
+.modal-botones.vertical { flex-direction: column; align-items: stretch; }
+.modal-botones.vertical .btn { width: 100%; }
+.toast.fisica .tir-total { font-size: 1.5rem; }
+
+/* Ajustes para móvil */
+.conj-n { min-width: 0; overflow-wrap: anywhere; }
+details.conjuro > summary { flex-wrap: nowrap; }
+.acerca p, .ficha-conj p, .entrada-cuerpo p { overflow-wrap: anywhere; }
+.caja small.pies { font-family: var(--serif); font-size: .68rem; margin-top: -.15em; }
+.ficha-conj { min-width: 0; max-width: 100%; }
+.ficha-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.ficha-grid span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .ficha-grid { grid-template-columns: minmax(0, 1fr); } details.conjuro .ficha-conj { margin-left: .3em; } }
+details.conjuro { display: block; }
+
+/* Iniciativa en móvil */
+@media (max-width: 560px) {
+  .ini-fila { grid-template-columns: 3.2em minmax(0, 1fr); grid-template-areas: 'valor info' 'valor extra'; row-gap: .3em; }
+  .ini-valor { grid-area: valor; align-self: center; }
+  .ini-info { grid-area: info; }
+  .ini-fila > .ini-pg, .ini-fila > .ini-botones { grid-column: 2; }
+  .ini-fila:has(.ini-pg) .ini-botones { justify-self: end; margin-top: -2.3em; }
+  .ini-fila.turno { transform: none; }
+  .ini-form-grid { display: flex; flex-wrap: wrap; gap: .45em; }
+  .ini-form-grid > input, .ini-form-grid > select { flex: 1 1 100%; width: 100%; }
+  .ini-form-grid > label { flex: 1 1 15%; min-width: 3.2em; }
+  .ini-form-grid > label input.num { width: 100%; }
+  .plantilla { flex-wrap: wrap; }
+  .plantilla .item-n { flex: 1 1 100%; }
+  .plantilla input.num { margin-left: auto; }
+  .segmentado.mini button { padding: .4em .7em; font-size: .75rem; }
+}

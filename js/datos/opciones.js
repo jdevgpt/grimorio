@@ -1,6 +1,10 @@
 // Reglas opcionales que el DM activa para su partida
 
 export const REGLAS_MESA = [
+  { id: 'dados', n: 'Dados', tipo: 'opcion', def: 'virtuales', opciones: [
+    ['virtuales', 'Dados virtuales', 'La app tira los dados al tocar ataques, pruebas, salvaciones y conjuros.'],
+    ['fisicos', 'Dados físicos', 'Tiráis en la mesa. La app solo dice qué tirar y pide el resultado cuando lo necesita (iniciativa, salvaciones contra muerte, concentración, dados de golpe y PG al subir de nivel).'],
+  ] },
   { id: 'carga', n: 'Peso y carga', tipo: 'opcion', def: 'no', opciones: [
     ['no', 'Sin control de peso', 'No se tiene en cuenta lo que llevan los personajes.'],
     ['estandar', 'Capacidad de carga', 'Pueden cargar 7 kg por punto de Fuerza (el doble si son Grandes o goliats). Si se pasan, su velocidad baja a 1,5 m.'],

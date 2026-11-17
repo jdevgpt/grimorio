@@ -1,5 +1,5 @@
 // Crónica de la partida: escritura compartida en tiempo real
-import { h, toast, confirmar, descargar, alSalir } from '../ui.js';
+import { h, toast, confirmar, descargar, alSalir, textoLibre } from '../ui.js';
 import { estado, escucharSub, crearEnSub, escribirEnSub, borrarEnSub, actualizarPartida, nombreDe, soyDMDe, puedeEscribirCronica } from '../almacen.js';
 
 const fecha = (t) => new Date(t).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -18,12 +18,12 @@ export function vistaCronica(cont, p) {
     const orden = [...entradas].sort((a, b) => a.creada - b.creada);
     lista.replaceChildren(...(orden.length ? orden.map((e) => {
       const mia = e.autor === uid;
-      if (e.tipo === 'sesion') return h('div.cr-sesion', {}, h('span', {}, e.texto), (mia || dm) && h('button.x', { onclick: () => borrar(e) }, '×'));
+      if (e.tipo === 'sesion') return h('div.cr-sesion', {}, h('span', {}, textoLibre(e.texto)), (mia || dm) && h('button.x', { onclick: () => borrar(e) }, '×'));
       if (e.borrador && mia) return null; // el propio borrador está en el editor
       if (editando === e.id) return editorEntrada(e);
       return h('article.cr-entrada' + (e.borrador ? '.borrador' : ''), {},
         h('header', {}, h('b', {}, nombreDe(p, e.autor)), h('small', {}, ` · ${fecha(e.creada)}${e.editada ? ' · editado' : ''}`), e.borrador ? h('span.escribiendo', {}, ' ✎ escribiendo…') : null),
-        h('div.cr-texto', {}, e.texto || '…'),
+        h('div.cr-texto', {}, textoLibre(e.texto || '…')),
         !e.borrador && (mia || dm) && h('div.cr-acciones', {},
           mia && h('button.btn.peq', { onclick: () => { editando = e.id; pintarLista(); } }, 'Editar'),
           h('button.btn.peq', { onclick: () => borrar(e) }, 'Borrar')),
