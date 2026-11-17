@@ -340,7 +340,6 @@ export function vistaHoja(cont, pjOriginal, irA) {
     guardar(pj); dibujar();
     if (!g) return toast(`Lanzas ${s.n}.`);
     const res = resolucion(g);
-    if (!g.x && !res.ataque && !res.salvacion) return toast(`Lanzas ${s.n}.`);
     setTimeout(() => panelLanzamiento(s, g, res, nivelEspacio), 120);
   }
 
@@ -382,7 +381,17 @@ export function vistaHoja(cont, pjOriginal, irA) {
         h('p.peq', {}, 'La tira el DM (o el objetivo). Tú no tiras para impactar.')));
     }
     pintarDano(!res.ataque);
-    modal(`✧ ${titulo}`, h('div.lanzamiento', {}, h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración, ' + g.du.toLowerCase() : g.du}`), ...pasos, zonaDano), [{ t: 'Cerrar' }]);
+    const explicacion = h('div.que-hace', {},
+      h('h4', {}, 'Qué hace'),
+      h('p', {}, g.d),
+      g.s && (nivelEspacio > g.nv || g.nv === 0) ? h('p.peq', {}, h('b', {}, g.nv === 0 ? 'A tu nivel: ' : `Lanzado a nivel ${nivelEspacio}: `), g.s) : null,
+      g.conc ? h('p.peq.aviso-conc', {}, `◉ Requiere concentración (${g.du.toLowerCase()}). Si recibes daño, haz una salvación de Constitución para mantenerlo.`) : null,
+      g.ritual ? h('p.peq', {}, '📜 También se puede lanzar como ritual (10 minutos más, sin gastar espacio).') : null,
+    );
+    document.getElementById('toasts').replaceChildren();
+    modal(`✧ ${titulo}`, h('div.lanzamiento', {},
+      h('p.peq', {}, `${g.t} · ${g.a} · ${g.c} · ${g.conc ? 'Concentración, ' + g.du.toLowerCase() : g.du}`),
+      explicacion, ...pasos, zonaDano), [{ t: 'Cerrar' }]);
   }
 
   // Ajusta los dados del conjuro al nivel del espacio o del personaje (trucos)

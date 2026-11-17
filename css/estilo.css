@@ -574,3 +574,7 @@ details.conjuro { display: block; }
 .resol.ataque { background: #f6dcd0; border-left: 3px solid var(--lacre); }
 .resol.salvacion { background: #f1e6c4; border-left: 3px solid var(--oro); }
 body:has(.modal-fondo) #toasts { top: calc(70px + env(safe-area-inset-top)); bottom: auto; }
+.que-hace { padding: .5em .7em; margin: .4em 0; background: rgba(255, 252, 242, .8); border: 1px solid var(--borde); border-left: 4px solid var(--oro); border-radius: 0 8px 8px 0; }
+.que-hace h4 { margin: .1em 0 .3em; }
+.que-hace p { margin: .3em 0; }
+.aviso-conc { color: var(--lacre-2); }
