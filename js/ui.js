@@ -91,3 +91,8 @@ export function descargar(nombre, texto, tipo = 'application/json') {
   const a = h('a', { href: URL.createObjectURL(new Blob([texto], { type: tipo })), download: nombre });
   document.body.append(a); a.click(); a.remove();
 }
+
+// Limpiezas al cambiar de pantalla (oyentes en tiempo real, temporizadores…)
+const limpiezas = [];
+export const alSalir = (fn) => limpiezas.push(fn);
+export function limpiarPantalla() { while (limpiezas.length) { try { limpiezas.pop()(); } catch { /* */ } } }

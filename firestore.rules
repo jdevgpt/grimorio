@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function partida(pid) { return get(/databases/$(database)/documents/partidas/$(pid)).data; }
+    function esMiembro(pid) { return request.auth != null && request.auth.uid in partida(pid).miembros; }
+    function esDM(pid) { return request.auth != null && partida(pid).dm == request.auth.uid; }
+    function escribeCronica(pid) { return esDM(pid) || request.auth.uid in partida(pid).get('escritores', []); }
+    function gestionaIni(pid) { return esDM(pid) || request.auth.uid in partida(pid).get('gestoresIni', []); }
+
     // Partidas: cualquiera con sesión puede buscar por código; solo el DM las gestiona.
     match /partidas/{pid} {
       allow read: if request.auth != null;
@@ -12,11 +18,36 @@ service cloud.firestore {
       allow update: if request.auth != null && (
         // El DM puede cambiar todo menos quién es el DM
         (resource.data.dm == request.auth.uid && request.resource.data.dm == resource.data.dm)
-        // Un jugador solo puede añadirse o quitarse a sí mismo de la lista de miembros
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros'])
-            && (request.resource.data.miembros.toSet() == resource.data.miembros.toSet().union([request.auth.uid].toSet())
+        // Un jugador solo puede añadirse o quitarse a sí mismo y poner su propio nombre
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['miembros', 'nombres'])
+            && request.resource.data.get('nombres', {}).diff(resource.data.get('nombres', {})).affectedKeys().hasOnly([request.auth.uid])
+            && (request.resource.data.miembros.toSet() == resource.data.miembros.toSet()
+                || request.resource.data.miembros.toSet() == resource.data.miembros.toSet().union([request.auth.uid].toSet())
                 || request.resource.data.miembros.toSet() == resource.data.miembros.toSet().difference([request.auth.uid].toSet())))
       );
+
+      // Crónica: la leen todos los miembros; escriben el DM y los jugadores que él marque.
+      match /cronica/{eid} {
+        allow read: if esMiembro(pid);
+        allow create: if escribeCronica(pid) && request.resource.data.autor == request.auth.uid;
+        allow update: if (resource.data.autor == request.auth.uid && request.resource.data.autor == request.auth.uid && escribeCronica(pid)) || esDM(pid);
+        allow delete: if resource.data.autor == request.auth.uid || esDM(pid);
+      }
+
+      // Iniciativa: el estado del combate lo llevan el DM y quien él asigne.
+      match /combate/{doc} {
+        allow read: if esMiembro(pid);
+        allow write: if gestionaIni(pid);
+      }
+      // Participantes: gestores, o cada jugador su propia entrada si el DM lo permite.
+      match /iniciativa/{iid} {
+        allow read: if esMiembro(pid);
+        allow create: if gestionaIni(pid)
+          || (partida(pid).get('iniPropia', false) && esMiembro(pid) && request.resource.data.uid == request.auth.uid);
+        allow update: if gestionaIni(pid)
+          || (partida(pid).get('iniPropia', false) && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid);
+        allow delete: if gestionaIni(pid) || resource.data.uid == request.auth.uid;
+      }
     }
 
     // Personajes: cada jugador escribe solo los suyos; los lee él y el DM de su partida.

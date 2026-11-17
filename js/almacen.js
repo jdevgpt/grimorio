@@ -110,7 +110,7 @@ const codigoAleatorio = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRS
 
 export async function crearPartida(nombre) {
   const { db, f } = fb; const u = estado.usuario;
-  const ref = await f.addDoc(f.collection(db, 'partidas'), { nombre, dm: u.uid, dmNombre: u.nombre, codigo: codigoAleatorio(), miembros: [u.uid], creada: Date.now(), reglas: { ...REGLAS_DEFECTO } });
+  const ref = await f.addDoc(f.collection(db, 'partidas'), { nombre, dm: u.uid, dmNombre: u.nombre, codigo: codigoAleatorio(), miembros: [u.uid], creada: Date.now(), reglas: { ...REGLAS_DEFECTO }, nombres: { [u.uid]: u.nombre }, escritores: [], gestoresIni: [], iniPropia: true });
   return ref.id;
 }
 
@@ -119,7 +119,7 @@ export async function unirsePartida(codigo) {
   const snap = await f.getDocs(f.query(f.collection(db, 'partidas'), f.where('codigo', '==', codigo.toUpperCase().trim())));
   if (snap.empty) throw new Error('No existe ninguna partida con ese código.');
   const d = snap.docs[0];
-  if (!d.data().miembros.includes(uid)) await f.updateDoc(d.ref, { miembros: f.arrayUnion(uid) });
+  if (!d.data().miembros.includes(uid)) await f.updateDoc(d.ref, { miembros: f.arrayUnion(uid), [`nombres.${uid}`]: estado.usuario.nombre });
   return { id: d.id, ...d.data() };
 }
 
@@ -145,3 +145,38 @@ export function reglasDe(pj) {
   const p = estado.partidas.find((x) => x.id === pj.partida);
   return p ? conDefecto(p.reglas) : null;
 }
+
+// ---------- Subcolecciones de la partida (crónica e iniciativa) ----------
+export const fbListo = () => !!fb && !!estado.usuario;
+const ruta = (...p) => p.join('/');
+
+export function escucharSub(pid, sub, cb) {
+  if (!fbListo()) return () => {};
+  const { db, f } = fb;
+  return f.onSnapshot(f.collection(db, ruta('partidas', pid, sub)), (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }, (e) => { console.warn(e); cb(null, e); });
+}
+export function escucharDoc(pid, sub, id, cb) {
+  if (!fbListo()) return () => {};
+  const { db, f } = fb;
+  return f.onSnapshot(f.doc(db, ruta('partidas', pid, sub, id)), (d) => cb(d.exists() ? d.data() : null), (e) => console.warn(e));
+}
+export async function crearEnSub(pid, sub, datos) {
+  const { db, f } = fb;
+  const r = await f.addDoc(f.collection(db, ruta('partidas', pid, sub)), datos);
+  return r.id;
+}
+export const escribirEnSub = (pid, sub, id, datos, fusionar = true) => fb.f.setDoc(fb.f.doc(fb.db, ruta('partidas', pid, sub, id)), datos, { merge: fusionar });
+export const borrarEnSub = (pid, sub, id) => fb.f.deleteDoc(fb.f.doc(fb.db, ruta('partidas', pid, sub, id)));
+export const actualizarPartida = (pid, campos) => fb.f.updateDoc(fb.f.doc(fb.db, 'partidas', pid), campos);
+
+// Guarda el nombre del usuario en la partida para que los demás lo vean
+export async function registrarNombre(p) {
+  if (!estado.usuario || p.nombres?.[estado.usuario.uid] === estado.usuario.nombre) return;
+  try { await actualizarPartida(p.id, { [`nombres.${estado.usuario.uid}`]: estado.usuario.nombre }); } catch (e) { console.warn(e); }
+}
+export const nombreDe = (p, uid) => p.nombres?.[uid] || (uid === p.dm ? p.dmNombre : 'Jugador');
+export const soyDMDe = (p) => estado.usuario?.uid === p.dm;
+export const puedeEscribirCronica = (p) => soyDMDe(p) || (p.escritores || []).includes(estado.usuario?.uid);
+export const gestionaIniciativa = (p) => soyDMDe(p) || (p.gestoresIni || []).includes(estado.usuario?.uid);

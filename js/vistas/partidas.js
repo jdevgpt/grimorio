@@ -1,13 +1,15 @@
 import { h, toast, confirmar, pedirTexto } from '../ui.js';
-import { guardarReglas, estado, entrar, salir, crearPartida, unirsePartida, borrarPartida, expulsar, personajesDePartida, misPersonajes, asignarPartida, hayLocales, subirLocales } from '../almacen.js';
+import { registrarNombre, guardarReglas, estado, entrar, salir, crearPartida, unirsePartida, borrarPartida, expulsar, personajesDePartida, misPersonajes, asignarPartida, hayLocales, subirLocales } from '../almacen.js';
 import { tarjetaPJ } from './inicio.js';
+import { vistaCronica } from './cronica.js';
+import { vistaIniciativa } from './iniciativa.js';
 import { calcular } from '../motor.js';
 import { ESTADOS } from '../datos/reglas.js';
 import { REGLAS_MESA, conDefecto, textoRegla } from '../datos/opciones.js';
 
 let reglasAbiertas = null;
 
-export function vistaPartidas(cont, irA, partidaId) {
+export function vistaPartidas(cont, irA, partidaId, sub) {
   if (!estado.nube) {
     cont.replaceChildren(h('section', {},
       h('h2', {}, 'Partidas compartidas'),
@@ -25,7 +27,7 @@ export function vistaPartidas(cont, irA, partidaId) {
     ));
     return;
   }
-  if (partidaId) return vistaMesa(cont, irA, partidaId);
+  if (partidaId) return vistaMesa(cont, irA, partidaId, sub);
 
   const locales = hayLocales();
   cont.replaceChildren(h('section', {},
@@ -42,9 +44,17 @@ export function vistaPartidas(cont, irA, partidaId) {
   ));
 }
 
-function vistaMesa(cont, irA, pid) {
+function vistaMesa(cont, irA, pid, sub) {
   const p = estado.partidas.find((x) => x.id === pid);
   if (!p) { cont.replaceChildren(h('p.ayuda', {}, 'Cargando partida… (o no perteneces a ella)')); return; }
+  registrarNombre(p);
+  const pestanas = h('nav.pestanas.mesa-pest', {}, [['', '⚑ Mesa'], ['cronica', '✒ Crónica'], ['iniciativa', '⚔ Iniciativa']].map(([id, t]) =>
+    h('button' + ((sub || '') === id ? '.sel' : ''), { onclick: () => irA(`#/partidas/${pid}${id ? '/' + id : ''}`) }, t)));
+  if (sub === 'cronica' || sub === 'iniciativa') {
+    const cuerpo = h('div');
+    cont.replaceChildren(h('section.mesa', {}, h('button.btn.peq', { onclick: () => irA('#/partidas') }, '← Partidas'), h('h2', {}, p.nombre), pestanas, cuerpo));
+    return sub === 'cronica' ? vistaCronica(cuerpo, p) : vistaIniciativa(cuerpo, p);
+  }
   const soyDM = p.dm === estado.usuario.uid;
   const pjs = personajesDePartida(pid);
   const mios = misPersonajes();
@@ -52,6 +62,7 @@ function vistaMesa(cont, irA, pid) {
   cont.replaceChildren(h('section.mesa', {},
     h('button.btn.peq', { onclick: () => irA('#/partidas') }, '← Partidas'),
     h('h2', {}, p.nombre),
+    pestanas,
     h('p', {}, soyDM ? 'Eres el DM de esta partida.' : `DM: ${p.dmNombre}`),
     soyDM && h('div.codigo', {}, h('small', {}, 'Código para invitar'), h('b', {}, p.codigo),
       h('button.btn.peq', { onclick: () => { navigator.clipboard?.writeText(p.codigo); toast('Código copiado'); } }, 'Copiar')),
