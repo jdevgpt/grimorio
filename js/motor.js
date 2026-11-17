@@ -6,6 +6,7 @@ import { trasfondo, dote } from './datos/trasfondos.js';
 import { arma, armadura } from './datos/equipo.js';
 import { conjuroPorNombre, LETRA_CLASE } from './datos/conjuros.js';
 import { conDefecto, pesoEstimado } from './datos/opciones.js';
+import { registrarDePJ } from './datos/personalizado.js';
 
 export const CAR_IDS = CARACTERISTICAS.map((c) => c.id);
 const ceros = () => Object.fromEntries(CAR_IDS.map((c) => [c, 0]));
@@ -83,6 +84,7 @@ export function pgMaximo(pj, car) {
 }
 
 export function calcular(pj, reglasMesa) {
+  registrarDePJ(pj);
   const reglas = conDefecto(reglasMesa);
   const car = caracFinales(pj);
   const m = Object.fromEntries(CAR_IDS.map((c) => [c, mod(car[c])]));
@@ -248,7 +250,7 @@ export function habilidadesEsperadas(pj) {
   let n = (cl?.hab.n || 0) + 2;
   if (es?.habilidadElegir) n += 1;
   const dotes = [trasfondo(pj.trasfondo)?.dote, ...(pj.dotes || [])].filter(Boolean);
-  n += dotes.filter((d) => d === 'habilidoso').length * 3;
+  n += dotes.reduce((t, d) => t + (dote(d)?.habilidades || 0), 0);
   if (pj.clase === 'bardo' && pj.nivel >= 3) n += 3;
   if (pj.clase === 'barbaro' && pj.nivel >= 3) n += 1;
   return n;
@@ -266,6 +268,7 @@ export function periciasMaximas(pj) {
 }
 
 export function validar(pj, reglasMesa) {
+  registrarDePJ(pj);
   const reglas = conDefecto(reglasMesa);
   const enMesa = !!reglasMesa;
   const out = [];

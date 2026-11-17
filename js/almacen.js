@@ -2,6 +2,7 @@
 import { firebaseConfig } from './firebase-config.js';
 import { guardarLocal, leerLocal } from './ui.js';
 import { REGLAS_DEFECTO, conDefecto } from './datos/opciones.js';
+import { embeber, registrar } from './datos/personalizado.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
 const CLAVE = 'senda.personajes';
@@ -52,7 +53,9 @@ function escuchar() {
     estado.personajes = nuevos; avisar();
   }, (e) => console.warn(e)));
   desuscribir.push(f.onSnapshot(f.query(f.collection(db, 'partidas'), f.where('miembros', 'array-contains', uid)), (snap) => {
-    estado.partidas = snap.docs.map((d) => ({ id: d.id, ...d.data() })); avisar();
+    estado.partidas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    estado.partidas.forEach((p) => registrar(p.contenido));
+    avisar();
   }, (e) => console.warn(e)));
 }
 
@@ -71,6 +74,7 @@ export const soyDMde = (pj) => !!estado.usuario && !!pj.partida && pj.partidaDm 
 const pendientes = new Map();
 export function guardar(pj, inmediato = false) {
   pj.actualizado = Date.now();
+  embeber(pj);
   estado.personajes[pj.id] = pj;
   if (!estado.usuario) { guardarLocal(CLAVE, estado.personajes); avisar(); return Promise.resolve(); }
   if (!pj.owner || pj.owner === estado.usuario.uid) {

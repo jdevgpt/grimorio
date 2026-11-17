@@ -1,10 +1,10 @@
 // Service worker: la app funciona sin conexión.
-const VERSION = 'senda-v6';
+const VERSION = 'senda-v7';
 const ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'img/emblema.svg', 'img/icono-192.png', 'img/icono-512.png',
   'js/app.js', 'js/ui.js', 'js/motor.js', 'js/almacen.js', 'js/firebase-config.js',
-  'js/datos/reglas.js', 'js/datos/conjuros.js', 'js/datos/conjuros/nivel0-1.js', 'js/datos/conjuros/nivel2-3.js', 'js/datos/conjuros/nivel4-5.js', 'js/datos/conjuros/nivel6-9.js', 'js/vistas/grimorio.js', 'js/datos/opciones.js', 'js/vistas/nivel.js', 'js/vistas/cronica.js', 'js/vistas/iniciativa.js', 'js/datos/clases.js', 'js/datos/especies.js', 'js/datos/trasfondos.js', 'js/datos/equipo.js',
+  'js/datos/reglas.js', 'js/datos/conjuros.js', 'js/datos/conjuros/nivel0-1.js', 'js/datos/conjuros/nivel2-3.js', 'js/datos/conjuros/nivel4-5.js', 'js/datos/conjuros/nivel6-9.js', 'js/vistas/grimorio.js', 'js/datos/opciones.js', 'js/vistas/nivel.js', 'js/vistas/cronica.js', 'js/vistas/iniciativa.js', 'js/vistas/contenido.js', 'js/datos/personalizado.js', 'js/datos/clases.js', 'js/datos/especies.js', 'js/datos/trasfondos.js', 'js/datos/equipo.js',
   'js/vistas/comun.js', 'js/vistas/inicio.js', 'js/vistas/creador.js', 'js/vistas/hoja.js',
   'js/vistas/partidas.js', 'js/vistas/compendio.js', 'js/vistas/dados.js',
 ];

@@ -24,6 +24,7 @@ export function vistaInicio(cont, irA) {
       h('div.acciones', {},
         h('button.btn.rojo', { onclick: () => irA('#/crear') }, '✦ Nuevo personaje'),
         h('button.btn', { onclick: () => importar.click() }, '⬆ Importar JSON'), importar,
+        h('button.btn', { onclick: () => irA('#/contenido') }, '📖 Contenido de mi libro'),
       ),
       lista.length ? h('div.lista-pj', {}, lista.map(tarjetaPJ(irA))) : h('div.vacio', {},
         h('p', {}, 'Aún no hay ningún errante en el camino.'),

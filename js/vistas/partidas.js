@@ -3,6 +3,7 @@ import { registrarNombre, guardarReglas, estado, entrar, salir, crearPartida, un
 import { tarjetaPJ } from './inicio.js';
 import { vistaCronica } from './cronica.js';
 import { vistaIniciativa } from './iniciativa.js';
+import { vistaContenido } from './contenido.js';
 import { calcular } from '../motor.js';
 import { ESTADOS } from '../datos/reglas.js';
 import { REGLAS_MESA, conDefecto, textoRegla } from '../datos/opciones.js';
@@ -48,8 +49,13 @@ function vistaMesa(cont, irA, pid, sub) {
   const p = estado.partidas.find((x) => x.id === pid);
   if (!p) { cont.replaceChildren(h('p.ayuda', {}, 'Cargando partida… (o no perteneces a ella)')); return; }
   registrarNombre(p);
-  const pestanas = h('nav.pestanas.mesa-pest', {}, [['', '⚑ Mesa'], ['cronica', '✒ Crónica'], ['iniciativa', '⚔ Iniciativa']].map(([id, t]) =>
+  const pestanas = h('nav.pestanas.mesa-pest', {}, [['', '⚑ Mesa'], ['cronica', '✒ Crónica'], ['iniciativa', '⚔ Iniciativa'], ['contenido', '📖 Libro']].map(([id, t]) =>
     h('button' + ((sub || '') === id ? '.sel' : ''), { onclick: () => irA(`#/partidas/${pid}${id ? '/' + id : ''}`) }, t)));
+  if (sub === 'contenido') {
+    const cuerpo = h('div');
+    cont.replaceChildren(h('section.mesa', {}, h('h2', {}, p.nombre), pestanas, cuerpo));
+    return vistaContenido(cuerpo, irA, p);
+  }
   if (sub === 'cronica' || sub === 'iniciativa') {
     const cuerpo = h('div');
     cont.replaceChildren(h('section.mesa', {}, h('button.btn.peq', { onclick: () => irA('#/partidas') }, '← Partidas'), h('h2', {}, p.nombre), pestanas, cuerpo));

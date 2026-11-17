@@ -6,6 +6,7 @@ import { vistaHoja } from './vistas/hoja.js';
 import { vistaPartidas } from './vistas/partidas.js';
 import { vistaCompendio } from './vistas/compendio.js';
 import { vistaDados } from './vistas/dados.js';
+import { vistaContenido } from './vistas/contenido.js';
 
 const vista = document.getElementById('vista');
 const irA = (hash) => { if (location.hash === hash) ruta(); else location.hash = hash; };
@@ -24,6 +25,7 @@ function ruta() {
     case 'partidas': return vistaPartidas(vista, irA, id, sub);
     case 'compendio': return vistaCompendio(vista);
     case 'dados': return vistaDados(vista);
+    case 'contenido': return vistaContenido(vista, irA, null);
     case 'acerca': return vistaAcerca();
     default: return vistaInicio(vista, irA);
   }
@@ -43,7 +45,7 @@ function vistaAcerca() {
 window.addEventListener('hashchange', () => { scrollTo(0, 0); ruta(); });
 alCambiar(() => {
   const [, sec, , sub] = (location.hash || '#/').split('/');
-  if (sec === 'crear' || sec === 'compendio' || sec === 'dados') return;
+  if (sec === 'crear' || sec === 'compendio' || sec === 'dados' || sec === 'contenido') return;
   if (sec === 'partidas' && (sub === 'cronica' || sub === 'iniciativa') && !mesaCambiada()) return;
   const activo = document.activeElement;
   if (document.querySelector('.modal-fondo') || (activo && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activo.tagName))) return;

@@ -420,3 +420,10 @@ details.conjuro .ficha-conj { margin: .4em 0 .2em 1.6em; }
 .ini-form-grid label { display: flex; flex-direction: column; }
 .ini-form-grid input.num { width: 3.6em; }
 @media (max-width: 560px) { .ini-form-grid { grid-template-columns: 1fr 1fr repeat(3, auto); } .ini-form-grid > input:first-child { grid-column: 1 / -1; } }
+
+/* Contenido del libro */
+.cont-bloque { margin-bottom: 1em; }
+.lista-cont { margin-bottom: .5em; }
+.form-cont .chips { margin: .2em 0; }
+.form-cont small { display: block; color: var(--tinta-3); }
+.rasgo-form { display: flex; flex-direction: column; gap: .3em; padding: .5em 0; border-bottom: 1px dotted var(--borde); }

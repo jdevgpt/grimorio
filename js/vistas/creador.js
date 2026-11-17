@@ -76,8 +76,9 @@ const PINTAR = [
   (re) => [
     h('h2', {}, 'Elige tu trasfondo'),
     h('p.ayuda', {}, 'El trasfondo te da aumentos de característica, una dote de origen, dos habilidades, una herramienta y equipo.'),
+    faltaAlgo('trasfondo'),
     h('div.rejilla-tarjetas', {}, TRASFONDOS.map((t) => h('button.tarjeta' + (pj.trasfondo === t.id ? '.sel' : ''), { onclick: () => { cambiarTrasfondo(t.id); re(); } },
-      h('strong', {}, t.n), h('span.dg', {}, t.carac.join(' · ')), h('span', {}, t.d)))),
+      h('strong', {}, t.n, t.custom ? ' 📖' : ''), h('span.dg', {}, t.carac.join(' · ')), h('span', {}, t.d)))),
     pj.trasfondo && (() => {
       const t = trasfondo(pj.trasfondo);
       return h('div.detalle', {},
@@ -91,8 +92,9 @@ const PINTAR = [
   // 3 Especie
   (re) => [
     h('h2', {}, 'Elige tu especie'),
+    faltaAlgo('especie'),
     h('div.rejilla-tarjetas', {}, ESPECIES.map((e) => h('button.tarjeta' + (pj.especie === e.id ? '.sel' : ''), { onclick: () => { if (pj.especie !== e.id) { pj.especie = e.id; pj.opcion = null; pj.tam = e.tam[0]; pj.caracConj = null; pj.dotes = pj.dotes.filter((d) => dote(d)?.tipo !== 'origen'); } re(); } },
-      h('strong', {}, e.n), h('span.dg', {}, `${e.tam.join(' o ')} · ${String(e.vel).replace('.', ',')} m`), h('span', {}, e.resumen)))),
+      h('strong', {}, e.n, e.custom ? ' 📖' : ''), h('span.dg', {}, `${e.tam.join(' o ')} · ${String(e.vel).replace('.', ',')} m`), h('span', {}, e.resumen)))),
     pj.especie && detalleEspecie(especie(pj.especie), re),
   ],
   // 4 Características
@@ -108,6 +110,8 @@ const PINTAR = [
 ];
 
 const campo = (et, input) => h('label.campo', {}, h('span', {}, et), input);
+const faltaAlgo = (que) => h('p.ayuda', {}, `El SRD gratuito no incluye todo el Manual de 2024. ¿Falta algún ${que}? `,
+  h('a', { href: '#/contenido' }, 'Añádelo desde tu libro'), ' (o pídeselo a tu DM en la pestaña «Libro» de la partida). Los marcados con 📖 son de vuestro libro.');
 const dato = (et, v) => h('p.dato', {}, h('b', {}, et + ': '), v);
 
 function detalleClase(c, re) {

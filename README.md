@@ -12,6 +12,7 @@ Compañero de mesa para la 5.ª edición con las **reglas de 2024**, en español
 - **Deshacer**: historial de los últimos 15 cambios importantes (subidas de nivel, descansos, ediciones, conjuros, equipo). El jugador o el DM de la partida pueden volver a cualquier punto.
 - **Crónica de la partida** en tiempo real: el DM y los jugadores que él marque escriben la historia; los demás la ven mientras se escribe. Separadores de sesión y descarga en Markdown.
 - **Iniciativa**: personajes de la mesa y enemigos (con cantidad, PG y CA), orden de turno automático, rondas, siguiente/anterior, enemigos ocultos, aviso «¡Es tu turno!», y terminar para empezar un combate nuevo. El DM elige quién la gestiona y si cada jugador tira la suya.
+- **Contenido de vuestro libro**: el SRD gratuito no incluye todo el Manual del Jugador de 2024. Se pueden añadir trasfondos, especies y dotes del libro (personales o, si los crea el DM, para toda la partida) y funcionan en el creador y el comprobador.
 - **Reglas de la mesa**: el DM activa o desactiva reglas para su partida (peso y carga, monedas que pesan, contar munición, métodos de características permitidos, PG al subir de nivel, PX o hitos, duración de los descansos, pociones como acción adicional, dotes). Se aplican solas en todas las hojas de la partida.
 - **Compendio** con buscador: reglas básicas, estados, clases, especies, trasfondos, dotes, conjuros, armas y armaduras.
 - Instalable en el móvil y funciona sin conexión.

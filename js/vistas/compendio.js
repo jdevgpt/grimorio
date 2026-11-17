@@ -43,7 +43,7 @@ function todas() {
     ...ESTADOS.map((e) => ({ s: 'estados', t: e.n, txt: e.d, el: () => entrada(e.n, '', p(e.d)) })),
     { s: 'estados', t: 'Agotamiento', txt: AGOTAMIENTO, el: () => entrada('Agotamiento', '', p(AGOTAMIENTO)) },
     ...CLASES.map((c) => ({ s: 'clases', t: c.n, txt: c.resumen + c.rasgos.map((r) => r.n + r.d).join(' ') + c.subclase.rasgos.map((r) => r.n + r.d).join(' '), el: () => entradaClase(c) })),
-    ...ESPECIES.map((e) => ({ s: 'especies', t: e.n, txt: e.resumen + e.rasgos.map((r) => r.n + r.d).join(' '), el: () => entrada(e.n, `${e.tam.join('/')} · ${metros(e.vel)}`, [
+    ...ESPECIES.map((e) => ({ s: 'especies', t: e.n + (e.custom ? ' 📖' : ''), txt: e.resumen + e.rasgos.map((r) => r.n + r.d).join(' '), el: () => entrada(e.n, `${e.tam.join('/')} · ${metros(e.vel)}`, [
       p(e.resumen), ...e.rasgos.map((r) => h('p', {}, h('b', {}, r.n + (r.nv ? ` (nv ${r.nv})` : '') + '. '), r.d)),
       e.opciones && h('div', {}, h('h4', {}, e.opciones.n), e.opciones.lista.map((o) => h('p.peq', {}, h('b', {}, o.n), o.d ? ': ' + o.d : ''))),
     ]) })),
