@@ -31,6 +31,17 @@ export function toast(msg, ms = 2600) {
   setTimeout(() => t.remove(), ms + 400);
 }
 
+// Aviso con un botón de acción (p. ej. «Deshacer»); dura más para dar tiempo a pulsarlo
+export function toastAccion(msg, textoBoton, accion, ms = 9000) {
+  const zona = document.getElementById('toasts');
+  while (zona.children.length >= 2) zona.firstChild.remove();
+  const t = h('div.toast.con-accion', {}, h('span', {}, msg),
+    h('button', { onclick: () => { t.remove(); accion(); } }, textoBoton));
+  zona.append(t);
+  setTimeout(() => t.classList.add('fuera'), ms);
+  setTimeout(() => t.remove(), ms + 400);
+}
+
 export function modal(titulo, contenido, botones = [{ t: 'Cerrar' }]) {
   return new Promise((res) => {
     const fondo = h('div.modal-fondo');

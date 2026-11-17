@@ -453,3 +453,9 @@ details.conjuro .ficha-conj { margin: .4em 0 .2em 1.6em; }
 .sel-conj-paso > summary::-webkit-details-marker { display: none; }
 .sel-conj-paso.sel { background: #f8e7cf; }
 .sel-conj-paso .ficha-conj { padding: 0 .8em .6em 2.2em; }
+
+/* Aviso con acción */
+#toasts .toast.con-accion { pointer-events: auto; display: flex; align-items: center; gap: .7em; }
+.toast.con-accion span { flex: 1; }
+.toast.con-accion button { flex: none; padding: .45em .9em; border-radius: 8px; border: 1px solid var(--oro); background: var(--oro-2); color: var(--cuero); font-family: var(--titulo); font-weight: 700; cursor: pointer; }
+.btn.deshacer { border-color: var(--oro); background: linear-gradient(180deg, #fff3cf, #ecd393); }

@@ -1,5 +1,5 @@
 // Hoja de personaje viva
-import { h, toast, modal, confirmar, tirarD20, mostrarTirada, estadoDados, descargar } from '../ui.js';
+import { h, toast, toastAccion, modal, confirmar, tirarD20, mostrarTirada, estadoDados, descargar } from '../ui.js';
 import { CARACTERISTICAS, HABILIDADES, ESTADOS, AGOTAMIENTO, IDIOMAS_ESTANDAR, IDIOMAS_RAROS, PX, fmt, mod, habilidad } from '../datos/reglas.js';
 import { CLASES, clase } from '../datos/clases.js';
 import { ESPECIES, especie } from '../datos/especies.js';
@@ -88,7 +88,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       dm && h('div.aviso-dm', {}, h('span', {}, modoDM ? '✎ Estás corrigiendo esta hoja como DM.' : '👁 Ves la hoja de tu jugador.'),
         h('button.btn.peq' + (modoDM ? '.rojo' : ''), { onclick: () => { modoDM = !modoDM; ro = !esMio(pj) && !(dm && modoDM); dibujar(); } }, modoDM ? 'Terminar corrección' : 'Corregir como DM')),
       !ro && h('div.acciones', {},
-        pj.historial?.length ? h('button.btn.peq', { onclick: () => restaurar(0), title: `Deshacer: ${pj.historial[0].d}` }, '↶ Deshacer') : null,
+        pj.historial?.length ? h('button.btn.peq.deshacer', { onclick: () => restaurar(0), title: `Deshacer: ${pj.historial[0].d}` }, `↶ Deshacer «${pj.historial[0].d.replace('Edición en «Editar y revisar»', 'edición')}»`) : null,
         h('button.btn.peq' + (pj.inspiracion ? '.dorado' : ''), { onclick: cambio(() => { pj.inspiracion = !pj.inspiracion; }), title: 'Inspiración heroica' }, pj.inspiracion ? '★ Inspiración' : '☆ Inspiración'),
         h('button.btn.peq', { onclick: descansoCorto }, '☾ Desc. corto'),
         h('button.btn.peq', { onclick: descansoLargo }, '☀ Desc. largo'),
@@ -216,7 +216,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     registrar('Descanso corto');
     for (const r of c.recursos) if (r.rec === 'corto') pj.recursos[r.id] = 0;
     pj.pactoGastados = 0;
-    guardar(pj); pestana = 'combate'; dibujar(); toast('Descanso corto completado.');
+    guardar(pj); pestana = 'combate'; dibujar(); toastAccion('Descanso corto completado.', '↶ Deshacer', () => restaurar(0));
   }
 
   async function descansoLargo() {
@@ -228,7 +228,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     pj.recursos = {}; pj.espaciosGastados = {}; pj.pactoGastados = 0;
     pj.agotamiento = Math.max(0, (pj.agotamiento || 0) - 1); pj.muerte = { ok: 0, ko: 0 }; pj.concentracion = null;
     if (pj.especie === 'humano') pj.inspiracion = true;
-    guardar(pj); dibujar(); toast('Descanso largo completado.');
+    guardar(pj); dibujar(); toastAccion('Descanso largo completado.', '↶ Deshacer', () => restaurar(0));
   }
 
   async function subirNivel() {
@@ -240,7 +240,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     aplicar(pj);
     const despues = calcular(pj, reglasDe(pj)).pgMax;
     pj.pg.actual = (pj.pg.actual ?? antes) + (despues - antes);
-    guardar(pj, true); dibujar(); toast(`¡Nivel ${pj.nivel}! Si te equivocaste, pulsa «Deshacer».`, 4000);
+    guardar(pj, true); dibujar(); toastAccion(`¡Nivel ${pj.nivel}!`, '↶ Deshacer', () => restaurar(0));
   }
 
   // ---------- Habilidades ----------
