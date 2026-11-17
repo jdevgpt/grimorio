@@ -4,6 +4,7 @@ import { clase, INVOCACIONES_BRUJO } from './datos/clases.js';
 import { especie } from './datos/especies.js';
 import { trasfondo, dote } from './datos/trasfondos.js';
 import { arma, armadura } from './datos/equipo.js';
+import { conjuroPorNombre, LETRA_CLASE } from './datos/conjuros.js';
 
 export const CAR_IDS = CARACTERISTICAS.map((c) => c.id);
 const ceros = () => Object.fromEntries(CAR_IDS.map((c) => [c, 0]));
@@ -354,6 +355,8 @@ export function validar(pj) {
     if (prep > c.magia.preparados) err(`Tienes ${prep} conjuros preparados; tu máximo es ${c.magia.preparados}.`);
     const maxNv = c.magia.pacto ? c.magia.pacto.nivel : c.magia.espacios.length;
     const altos = (pj.conjuros || []).filter((s) => Number(s.nv) > maxNv && !s.extra);
+    const fuera = (pj.clase === 'bardo' && pj.nivel >= 6) ? [] : (pj.conjuros || []).filter((s) => !s.extra && conjuroPorNombre(s.n) && !conjuroPorNombre(s.n).cl.includes(LETRA_CLASE[pj.clase]));
+    if (fuera.length) av(`Conjuros que no son de la lista de ${cl.n.toLowerCase()} (válidos solo si vienen de una dote, rasgo u objeto): ${fuera.map((s) => s.n).join(', ')}.`);
     if (altos.length) err(`Tienes conjuros de nivel superior al que puedes lanzar (${maxNv}): ${altos.map((s) => s.n).join(', ')}.`);
   }
 

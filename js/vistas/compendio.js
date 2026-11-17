@@ -5,6 +5,10 @@ import { ESPECIES } from '../datos/especies.js';
 import { TRASFONDOS, DOTES, dote } from '../datos/trasfondos.js';
 import { ARMAS, ARMADURAS, PROPIEDADES, MAESTRIAS } from '../datos/equipo.js';
 import { metros } from './comun.js';
+import { CONJUROS, nivelTexto } from '../datos/conjuros.js';
+import { fichaConjuro, etiquetasConj, filtrarConjuros, barraFiltros } from './grimorio.js';
+
+const filtroConj = { q: '', nv: '', cl: '', esc: '' };
 
 const SECCIONES = [
   ['reglas', 'Reglas'], ['estados', 'Estados'], ['clases', 'Clases'], ['especies', 'Especies'],
@@ -53,12 +57,17 @@ function todas() {
       ...a.prop.map((x) => h('p.peq', {}, PROPIEDADES[x])), h('p.peq', {}, h('b', {}, 'Maestría — '), MAESTRIAS[a.m]), a.nota && p(a.nota),
       dato('Precio', `${a.po} po · ${String(a.kg).replace('.', ',')} kg`),
     ]) })),
+    ...CONJUROS.map((s) => ({ s: 'conjuros', t: s.n, txt: s.d, el: () => entradaConjuro(s) })),
     ...ARMADURAS.map((a) => ({ s: 'armaduras', t: a.n, txt: a.tipo, el: () => entrada(a.n, a.tipo, [
       dato('CA', a.tipo === 'escudo' ? '+2' : `${a.base}${a.dex === true ? ' + Des' : a.dex ? ` + Des (máx. ${a.dex})` : ''}`),
       a.fue && dato('Fuerza', `${a.fue} (si no, −3 m de velocidad)`), a.sig && p('Desventaja en Sigilo.'),
       dato('Precio', `${a.po} po · ${String(a.kg).replace('.', ',')} kg`),
     ]) })),
   ];
+}
+
+function entradaConjuro(s) {
+  return h('details.entrada', {}, h('summary', {}, h('b', {}, s.n), ' ', etiquetasConj(s), h('small', {}, ` ${nivelTexto(s.nv)} · ${s.escuela}`)), h('div.entrada-cuerpo', {}, fichaConjuro(s)));
 }
 
 function entradaClase(c) {
@@ -76,7 +85,16 @@ function entradaClase(c) {
 }
 
 function pintarSeccion() {
-  if (seccion === 'conjuros') return h('div.vacio', {}, h('p', {}, '✧ El grimorio de conjuros del SRD llegará en la siguiente fase.'), h('p.peq', {}, 'Mientras tanto, puedes anotar tus conjuros a mano en la hoja.'));
+  if (seccion === 'conjuros') {
+    const lista = h('div');
+    const pintar = () => {
+      const r = filtrarConjuros(filtroConj);
+      lista.replaceChildren(h('p.peq', {}, `${r.length} conjuro(s)`), ...r.map(entradaConjuro));
+    };
+    const caja = h('div', {}, barraFiltros(filtroConj, pintar), lista);
+    pintar();
+    return caja;
+  }
   return h('div', {}, todas().filter((x) => x.s === seccion).map((x) => x.el()));
 }
 

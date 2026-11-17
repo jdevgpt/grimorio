@@ -7,7 +7,8 @@ Compañero de mesa para la 5.ª edición con las **reglas de 2024**, en español
 - **Hoja viva**: PG y PG temporales, daño y curación, salvaciones contra muerte, estados, agotamiento, recursos de clase y especie, espacios de conjuro, dados de golpe, descansos corto y largo, subida de nivel, inventario y monedas.
 - **Dados**: toca cualquier característica, salvación, habilidad o ataque para tirarlo (con ventaja o desventaja).
 - **Partidas compartidas** (con Firebase): cada jugador edita solo su hoja; el DM ve todas en tiempo real y tiene una vista rápida de la mesa.
-- **Compendio** con buscador: reglas básicas, estados, clases, especies, trasfondos, dotes, armas y armaduras.
+- **Grimorio** con los 326 conjuros del SRD 5.2 en español (resumidos): filtros por nivel, clase, escuela, concentración y ritual. Desde la hoja se añaden de tu lista, se lanzan gastando espacio (con daño o curación escalados) y se lleva la concentración.
+- **Compendio** con buscador: reglas básicas, estados, clases, especies, trasfondos, dotes, conjuros, armas y armaduras.
 - Instalable en el móvil y funciona sin conexión.
 
 App: https://jdevgpt.github.io/grimorio/

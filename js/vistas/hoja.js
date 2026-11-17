@@ -8,6 +8,8 @@ import { ARMAS, ARMADURAS, PROPIEDADES, MAESTRIAS, arma, armadura } from '../dat
 import { calcular, validar, tirar, CAR_IDS, periciasMaximas } from '../motor.js';
 import { guardar, borrar, esMio, estado, asignarPartida } from '../almacen.js';
 import { informeValidacion, metros } from './comun.js';
+import { conjuroPorNombre, LETRA_CLASE } from '../datos/conjuros.js';
+import { fichaConjuro, etiquetasConj, elegirConjuros } from './grimorio.js';
 
 const PESTANAS = [['combate', '⚔ Combate'], ['habilidades', '◎ Habilidades'], ['conjuros', '✧ Conjuros'], ['equipo', '⚖ Equipo'], ['rasgos', '❖ Rasgos'], ['notas', '✎ Notas'], ['revisar', '⚙ Editar y revisar']];
 let pestana = 'combate';
@@ -84,7 +86,11 @@ export function vistaHoja(cont, pjOriginal, irA) {
       if (act === 0 && resto > 0) { pj.muerte.ko = Math.min(3, pj.muerte.ko + 1); toast('Daño a 0 PG: un fallo en salvación contra muerte.'); }
       if (resto - act >= c.pgMax) toast('☠ El daño restante iguala o supera tus PG máximos: muerte instantánea.', 5000);
       act = Math.max(0, act - resto);
-      if (act === 0) toast('Caes inconsciente. Haz salvaciones contra muerte.');
+      if (act === 0) { toast('Caes inconsciente. Haz salvaciones contra muerte.'); if (pj.concentracion) { toast(`Pierdes la concentración en ${pj.concentracion}.`); pj.concentracion = null; } }
+      else if (pj.concentracion) {
+        const cd = Math.min(30, Math.max(10, Math.floor(n / 2)));
+        setTimeout(() => { const r = tirarD20(`Concentración (CD ${cd})`, c.salvaciones.CON.v); if (r.total < cd) toast(`Fallas: pierdes ${pj.concentracion}. Pulsa «Terminar» si así es.`, 5000); else toast('Mantienes la concentración.'); }, 200);
+      }
     } else if (tmp.querySelector('input').checked) {
       pj.pg.temp = Math.max(pj.pg.temp || 0, n);
     } else {
@@ -98,6 +104,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
   // ---------- Combate ----------
   function combate() {
     return [
+      concentracionAviso(),
       h('h3', {}, 'Características'),
       h('div.carac-grid', {}, CARACTERISTICAS.map((k) => h('button.carac.tirable', { onclick: () => tirarD20(`${k.n}`, c.mod[k.id]) },
         h('small', {}, k.n), h('b', {}, fmt(c.mod[k.id])), h('span', {}, c.car[k.id])))),
@@ -177,7 +184,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     if (!ok) return;
     pj.pg.actual = c.pgMax; pj.pg.temp = 0; pj.dadosGolpeGastados = 0;
     pj.recursos = {}; pj.espaciosGastados = {}; pj.pactoGastados = 0;
-    pj.agotamiento = Math.max(0, (pj.agotamiento || 0) - 1); pj.muerte = { ok: 0, ko: 0 };
+    pj.agotamiento = Math.max(0, (pj.agotamiento || 0) - 1); pj.muerte = { ok: 0, ko: 0 }; pj.concentracion = null;
     if (pj.especie === 'humano') pj.inspiracion = true;
     guardar(pj); dibujar(); toast('Descanso largo completado.');
   }
@@ -229,15 +236,18 @@ export function vistaHoja(cont, pjOriginal, irA) {
   // ---------- Conjuros ----------
   function conjuros() {
     const m = c.magia;
-    const lista = [...(pj.conjuros || [])].map((s, i) => ({ ...s, i })).sort((a, b) => a.nv - b.nv || a.n.localeCompare(b.n));
+    const lista = [...(pj.conjuros || [])].map((s, i) => ({ ...s, i, g: conjuroPorNombre(s.n) })).sort((a, b) => a.nv - b.nv || a.n.localeCompare(b.n, 'es'));
     const porNivel = {};
     lista.forEach((s) => { (porNivel[s.nv] ||= []).push(s); });
     const nPrep = lista.filter((s) => s.nv > 0 && s.prep && !s.siempre && !s.extra).length;
+    const nTrucos = lista.filter((s) => s.nv === 0 && !s.extra).length;
+    const maxNv = m ? (m.pacto ? m.pacto.nivel : m.espacios.length) : 0;
     return [
+      concentracionAviso(),
       m ? h('div.cajas', {},
         caja('Caract.', m.car), caja('CD', m.cd),
         caja('Ataque', fmt(m.ataque), 'Tirar ataque de conjuro', () => tirarD20('Ataque de conjuro', m.ataque)),
-        m.tipo !== 'innata' && caja('Trucos', m.trucos), m.tipo !== 'innata' && caja('Preparados', `${nPrep}/${m.preparados}`),
+        m.tipo !== 'innata' && caja('Trucos', `${nTrucos}/${m.trucos}`), m.tipo !== 'innata' && caja('Preparados', `${nPrep}/${m.preparados}`),
       ) : h('p.ayuda', {}, 'Tu personaje no lanza conjuros de clase. Puedes anotar aquí conjuros de rasgos u objetos.'),
       m?.espacios?.length ? [h('h3', {}, 'Espacios de conjuro'), h('div.espacios', {}, m.espacios.map((n, i) => {
         const g = pj.espaciosGastados[i + 1] || 0;
@@ -245,17 +255,79 @@ export function vistaHoja(cont, pjOriginal, irA) {
       }))] : null,
       m?.pacto ? [h('h3', {}, `Espacios de pacto (nivel ${m.pacto.nivel})`), h('div.espacio', {}, marcas(m.pacto.n - (pj.pactoGastados || 0), m.pacto.n, (q) => { pj.pactoGastados = m.pacto.n - q; })), h('p.peq', {}, 'Se recuperan con un descanso corto o largo.')] : null,
       h('h3', {}, 'Mis conjuros'),
+      !ro && h('div.acciones', {},
+        h('button.btn.rojo', { onclick: async () => {
+          const nuevos = await elegirConjuros({ claseId: pj.clase, maxNv: m && m.tipo !== 'innata' ? maxNv : null, yaTiene: new Set(lista.map((s) => s.g?.id).filter(Boolean)) });
+          if (!nuevos.length) return;
+          for (const s of nuevos) pj.conjuros.push({ n: s.n, nv: s.nv, prep: true });
+          guardar(pj); dibujar(); toast(`${nuevos.length} conjuro(s) añadidos`);
+        } }, '✧ Añadir del grimorio')),
       Object.keys(porNivel).length ? Object.entries(porNivel).map(([nv, ss]) => h('div.grupo-conj', {},
         h('h4', {}, nv === '0' ? 'Trucos' : `Nivel ${nv}`),
-        ss.map((s) => h('div.conjuro', {},
-          s.nv > 0 && !s.siempre ? h('input', { type: 'checkbox', checked: !!s.prep, title: 'Preparado', onchange: cambio((e) => { pj.conjuros[s.i].prep = e.target.checked; }) }) : h('span.marca', {}, '✦'),
-          h('span', {}, h('b', {}, s.n), s.fuente ? h('small', {}, ` · ${s.fuente}`) : '', s.notas ? h('small', {}, ` · ${s.notas}`) : ''),
-          !ro && h('button.x', { onclick: cambio(() => { pj.conjuros.splice(s.i, 1); }) }, '×'),
+        ss.map((s) => h('details.conjuro', {},
+          h('summary', {},
+            s.nv > 0 && !s.siempre ? h('input', { type: 'checkbox', checked: !!s.prep, title: 'Preparado', onclick: (e) => e.stopPropagation(), onchange: cambio((e) => { pj.conjuros[s.i].prep = e.target.checked; }) }) : h('span.marca', {}, '✦'),
+            h('span.conj-n', {}, h('b', {}, s.n), ' ', s.g ? etiquetasConj(s.g) : null, s.fuente ? h('small', {}, ` · ${s.fuente}`) : '', s.g && !s.extra && m && pj.clase && !s.g.cl.includes(LETRA_CLASE[pj.clase]) ? h('small.mal', {}, ' · fuera de tu lista') : null),
+            !ro && h('button.btn.peq.lanzar', { onclick: (e) => { e.preventDefault(); lanzar(s); } }, 'Lanzar'),
+          ),
+          s.g ? fichaConjuro(s.g) : h('p.peq', {}, s.notas || 'Conjuro anotado a mano.'),
+          !ro && h('button.x', { onclick: cambio(() => { pj.conjuros.splice(s.i, 1); }) }, '× quitar'),
         )),
-      )) : h('p.peq', {}, 'Aún no hay conjuros anotados.'),
-      !ro && formConjuro(),
-      h('p.ayuda', {}, 'Próximamente: elegir conjuros del compendio del SRD con su descripción completa.'),
+      )) : h('p.peq', {}, 'Aún no hay conjuros. Añádelos desde el grimorio.'),
+      !ro && h('details', {}, h('summary.peq', {}, 'Anotar un conjuro a mano'), formConjuro()),
     ];
+  }
+
+  function concentracionAviso() {
+    if (!pj.concentracion) return null;
+    return h('div.concentracion', {}, h('span', {}, '◉ Concentrado en ', h('b', {}, pj.concentracion)),
+      !ro && h('button.btn.peq', { onclick: cambio(() => { pj.concentracion = null; }) }, 'Terminar'));
+  }
+
+  async function lanzar(s) {
+    const g = s.g; const m = c.magia;
+    let nivelEspacio = 0;
+    if (s.nv > 0) {
+      const opciones = [];
+      if (m?.pacto && m.pacto.nivel >= s.nv && (pj.pactoGastados || 0) < m.pacto.n) opciones.push({ t: `Espacio de pacto (nv ${m.pacto.nivel})`, v: 'p' });
+      (m?.espacios || []).forEach((n, i) => { const nv = i + 1; if (nv >= s.nv && (pj.espaciosGastados[nv] || 0) < n) opciones.push({ t: `Nivel ${nv} (${n - (pj.espaciosGastados[nv] || 0)} libres)`, v: nv }); });
+      const botones = [{ t: 'Cancelar', v: null }, { t: 'Sin espacio', v: 0 }, ...opciones.map((o) => ({ ...o, clase: 'rojo' }))];
+      const r = await modal(`Lanzar ${s.n}`, h('div', {},
+        g && h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración' : g.du}`),
+        h('p', {}, opciones.length ? '¿Con qué espacio?' : 'No te quedan espacios del nivel necesario.'),
+        h('p.peq', {}, '«Sin espacio»: rasgos que lo permiten, rituales o usos gratuitos.')), botones);
+      if (r === null || r === undefined) return;
+      if (r === 'p') { pj.pactoGastados = (pj.pactoGastados || 0) + 1; nivelEspacio = m.pacto.nivel; }
+      else if (r > 0) { pj.espaciosGastados[r] = (pj.espaciosGastados[r] || 0) + 1; nivelEspacio = r; }
+    }
+    if (g?.conc) {
+      if (pj.concentracion && pj.concentracion !== s.n) toast(`Dejas de concentrarte en ${pj.concentracion}.`);
+      pj.concentracion = s.n;
+    }
+    guardar(pj); dibujar();
+    if (g?.x) {
+      const expr = escalarTirada(g, nivelEspacio);
+      const curacion = /curaci|recupera/i.test(g.d) && !/necr|fuego|radiante|ácido/i.test(g.d.split('.')[0]);
+      setTimeout(() => mostrarTirada(`${s.n}${nivelEspacio > s.nv ? ` (nv ${nivelEspacio})` : ''}${curacion ? ': curación' : ''}`, expr), 150);
+    } else toast(`Lanzas ${s.n}.`);
+  }
+
+  // Ajusta los dados del conjuro al nivel del espacio o del personaje (trucos)
+  function escalarTirada(g, nivelEspacio) {
+    let expr = g.x;
+    const dado = g.x.match(/^(\d+)d(\d+)/);
+    if (!dado) return expr;
+    let n = Number(dado[1]);
+    if (g.nv === 0) {
+      const tramo = pj.nivel >= 17 ? 3 : pj.nivel >= 11 ? 2 : pj.nivel >= 5 ? 1 : 0;
+      if (/sube|Daño \d|Dado/.test(g.s || '')) n += tramo;
+    } else if (nivelEspacio > g.nv && g.s) {
+      const extra = (g.s.match(/^\+(\d+)d\d+ por nivel/) || [])[1];
+      if (extra) n += Number(extra) * (nivelEspacio - g.nv);
+    }
+    expr = expr.replace(/^\d+d/, `${n}d`);
+    const sumaMod = /modificador de lanzamiento/.test(g.d) && c.magia ? c.mod[c.magia.car] : 0;
+    return sumaMod ? `${expr}${fmt(sumaMod)}` : expr;
   }
 
   function formConjuro() {
