@@ -14,6 +14,8 @@ import { fichaConjuro, etiquetasConj, elegirConjuros } from './grimorio.js';
 
 const PESTANAS = [['combate', '⚔ Combate'], ['habilidades', '◎ Habilidades'], ['conjuros', '✧ Conjuros'], ['equipo', '⚖ Equipo'], ['rasgos', '❖ Rasgos'], ['notas', '✎ Notas'], ['revisar', '⚙ Editar y revisar']];
 let pestana = 'combate';
+// Cuándo puede cambiar cada clase sus conjuros preparados (reglas 2024)
+const MODO_PREP = { clerigo: 'largo', druida: 'largo', mago: 'largo', paladin: 'uno', explorador: 'uno', bardo: 'nivel', hechicero: 'nivel', brujo: 'nivel' };
 let modoDM = false;
 const MAX_HISTORIAL = 15;
 
@@ -221,7 +223,10 @@ export function vistaHoja(cont, pjOriginal, irA) {
     registrar('Descanso corto');
     for (const r of c.recursos) if (r.rec === 'corto') pj.recursos[r.id] = 0;
     pj.pactoGastados = 0;
+    const memorizar = pj.clase === 'mago' && pj.nivel >= 5 && !ventana();
+    if (memorizar) abrirVentana({ tipo: 'cambios', restantes: 1, motivo: 'Memorizar conjuro' });
     guardar(pj); pestana = 'combate'; dibujar(); toastAccion('Descanso corto completado.', '↶ Deshacer', () => restaurar(0));
+    if (memorizar) setTimeout(() => pedirPreparacion('Memorizar conjuro: cambia uno'), 300);
   }
 
   async function descansoLargo() {
@@ -233,7 +238,11 @@ export function vistaHoja(cont, pjOriginal, irA) {
     pj.recursos = {}; pj.espaciosGastados = {}; pj.pactoGastados = 0;
     pj.agotamiento = Math.max(0, (pj.agotamiento || 0) - 1); pj.muerte = { ok: 0, ko: 0 }; pj.concentracion = null;
     if (pj.especie === 'humano') pj.inspiracion = true;
+    const modo = MODO_PREP[pj.clase];
+    if (limitePrep() && modo === 'largo') abrirVentana({ tipo: 'libre', motivo: 'tras el descanso largo' });
+    if (limitePrep() && modo === 'uno') abrirVentana({ tipo: 'cambios', restantes: 1, motivo: 'tras el descanso largo' });
     guardar(pj); dibujar(); toastAccion('Descanso largo completado.', '↶ Deshacer', () => restaurar(0));
+    if (ventana()) setTimeout(() => pedirPreparacion('Prepara tus conjuros'), 300);
   }
 
   async function subirNivel() {
@@ -242,9 +251,17 @@ export function vistaHoja(cont, pjOriginal, irA) {
     if (!aplicar) return;
     registrar(`Subida a nivel ${pj.nivel + 1}`);
     const antes = c.pgMax;
+    const prepAntes = limitePrep();
     aplicar(pj);
-    const despues = calcular(pj, reglasDe(pj)).pgMax;
+    const cN = calcular(pj, reglasDe(pj));
+    const despues = cN.pgMax;
     pj.pg.actual = (pj.pg.actual ?? antes) + (despues - antes);
+    const prepDespues = cN.magia && cN.magia.tipo !== 'innata' ? cN.magia.preparados : 0;
+    if (prepDespues) {
+      const modo = MODO_PREP[pj.clase];
+      if (modo === 'largo') abrirVentana({ tipo: 'libre', motivo: `al subir a nivel ${pj.nivel}` });
+      else abrirVentana({ tipo: 'cambios', restantes: 1 + Math.max(0, prepDespues - prepAntes), motivo: `al subir a nivel ${pj.nivel}` });
+    }
     guardar(pj, true); dibujar(); toastAccion(`¡Nivel ${pj.nivel}!`, '↶ Deshacer', () => restaurar(0));
   }
 
@@ -287,6 +304,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       }))] : null,
       m?.pacto ? [h('h3', {}, `Espacios de pacto (nivel ${m.pacto.nivel})`), h('div.espacio', {}, marcas(m.pacto.n - (pj.pactoGastados || 0), m.pacto.n, (q) => { pj.pactoGastados = m.pacto.n - q; })), h('p.peq', {}, 'Se recuperan con un descanso corto o largo.')] : null,
       h('h3', {}, 'Mis conjuros'),
+      avisoPreparacion(),
       m && m.tipo !== 'innata' ? h('p.peq', {}, `☑ = preparado. Puedes tener ${m.preparados} preparados${pj.clase === 'mago' ? '; el resto quedan en tu libro de conjuros' : ''}. Los que no marques siguen en tu lista para cambiarlos tras un descanso largo.`) : null,
       !ro && h('div.acciones', {},
         h('button.btn.rojo', { onclick: async () => {
@@ -295,11 +313,11 @@ export function vistaHoja(cont, pjOriginal, irA) {
           registrar('Conjuros');
           let sinPreparar = 0;
           for (const s of nuevos) {
-            const prep = s.nv === 0 || !limitePrep() || nPrepActual() < limitePrep();
+            const prep = s.nv === 0 || !limitePrep() || (!!ventana() && nPrepActual() < limitePrep() && (ventana().tipo === 'libre' || ventana().restantes-- > 0));
             if (!prep) sinPreparar++;
             pj.conjuros.push({ n: s.n, nv: s.nv, prep });
           }
-          if (sinPreparar) setTimeout(() => toast(`${sinPreparar} se han añadido sin preparar porque ya tenías el máximo. Puedes cambiar cuáles preparas con las casillas.`, 5000), 400);
+          if (sinPreparar) setTimeout(() => toast(ventana() ? `${sinPreparar} añadidos sin preparar: ya tenías el máximo o no te quedan cambios.` : `${sinPreparar} añadidos a tu lista sin preparar: tus preparados están fijados hasta que puedas cambiarlos.`, 5000), 400);
           guardar(pj); dibujar(); toast(`${nuevos.length} conjuro(s) añadidos`);
         } }, '✧ Añadir del grimorio')),
       Object.keys(porNivel).length ? Object.entries(porNivel).map(([nv, ss]) => h('div.grupo-conj', {},
@@ -308,11 +326,8 @@ export function vistaHoja(cont, pjOriginal, irA) {
           h('summary', {},
             s.nv > 0 && !s.siempre ? h('input', { type: 'checkbox', checked: !!s.prep, title: s.prep ? 'Preparado (toca para quitar)' : 'Sin preparar (toca para preparar)', onclick: (e) => e.stopPropagation(), onchange: (e) => {
               if (ro) return;
-              if (e.target.checked && limitePrep() && nPrepActual() >= limitePrep() && !s.extra) {
-                e.target.checked = false;
-                return toast(`Ya tienes ${nPrepActual()}/${limitePrep()} conjuros preparados. Desmarca otro antes de preparar este.`, 4500);
-              }
-              pj.conjuros[s.i].prep = e.target.checked; guardar(pj); dibujar();
+              if (!intentarPreparar(s.i, e.target.checked)) { e.target.checked = !e.target.checked; return; }
+              guardar(pj); dibujar();
             } }) : h('span.marca', {}, '✦'),
             h('span.conj-n', {}, h('b', {}, s.n), ' ', s.g ? etiquetasConj(s.g) : null, s.fuente ? h('small', {}, ` · ${s.fuente}`) : '', s.g && !s.extra && m && pj.clase && !s.g.cl.includes(LETRA_CLASE[pj.clase]) ? h('small.mal', {}, ' · fuera de tu lista') : null),
             !ro && h('button.btn.peq.lanzar', { onclick: (e) => { e.preventDefault(); lanzar(s); } }, 'Lanzar'),
@@ -323,6 +338,55 @@ export function vistaHoja(cont, pjOriginal, irA) {
       )) : h('p.peq', {}, 'Aún no hay conjuros. Añádelos desde el grimorio.'),
       !ro && h('details', {}, h('summary.peq', {}, 'Anotar un conjuro a mano'), formConjuro()),
     ];
+  }
+
+  // Ventana de preparación: null = bloqueado; { tipo: 'libre' } o { tipo: 'cambios', restantes, motivo }
+  const ventana = () => pj.prepVentana || null;
+  const abrirVentana = (v) => { pj.prepVentana = { ...v, inicial: (pj.conjuros || []).filter((x) => x.prep).map((x) => x.n) }; };
+  function textoVentana() {
+    const v = ventana();
+    if (!v) return '🔒 Tus conjuros preparados están fijados. ' + ({ largo: 'Podrás cambiarlos tras tu próximo descanso largo.', uno: 'Tras tu próximo descanso largo podrás cambiar uno.', nivel: 'Podrás cambiar uno cuando subas de nivel.' }[MODO_PREP[pj.clase]] || '');
+    if (v.tipo === 'libre') return `✏ Puedes cambiar tus conjuros preparados${v.motivo ? ` (${v.motivo})` : ''}. Pulsa «Fijar» al terminar.`;
+    return `✏ Puedes preparar ${v.restantes} conjuro${v.restantes === 1 ? '' : 's'} nuevo${v.restantes === 1 ? '' : 's'}${v.motivo ? ` (${v.motivo})` : ''}: desmarca uno y marca otro. Pulsa «Fijar» al terminar.`;
+  }
+  function avisoPreparacion() {
+    if (!limitePrep()) return null;
+    const v = ventana();
+    return h('div.aviso-prep' + (v ? '.abierta' : ''), {}, h('span', {}, textoVentana()),
+      !ro && (v ? h('button.btn.peq.rojo', { onclick: cambio(() => { pj.prepVentana = null; toast('Conjuros preparados fijados.'); }) }, '✔ Fijar')
+        : h('button.btn.peq', { onclick: async () => { if (await confirmar('Cambiar conjuros preparados', 'Úsalo solo si tu DM lo permite o un rasgo te deja cambiar conjuros ahora.', 'Desbloquear')) { registrar('Desbloquear conjuros'); abrirVentana({ tipo: 'libre', motivo: 'desbloqueado a mano' }); guardar(pj); dibujar(); } } }, '🔓 Desbloquear')));
+  }
+  // Cuadro que aparece tras el descanso largo (o al subir de nivel) para preparar conjuros
+  async function pedirPreparacion(titulo) {
+    pestana = 'conjuros'; dibujar();
+    const cuerpo = h('div');
+    const pintarLista = () => {
+      const lista = (pj.conjuros || []).map((x, i) => ({ ...x, i })).filter((x) => Number(x.nv) > 0 && !x.extra && !x.siempre).sort((a, b) => a.nv - b.nv || a.n.localeCompare(b.n, 'es'));
+      cuerpo.replaceChildren(...[
+        h('p', {}, textoVentana()),
+        h('p.peq', {}, `Preparados: ${nPrepActual()}/${limitePrep()}`),
+        h('div.lista-preparar', {}, lista.map((x) => h('label.radio', {}, h('input', { type: 'checkbox', checked: !!x.prep, onchange: (e) => { if (!intentarPreparar(x.i, e.target.checked)) e.target.checked = !e.target.checked; pintarLista(); } }), ` ${x.n}`, h('small', {}, ` · nivel ${x.nv}`)))),
+        lista.length ? null : h('p.peq', {}, 'Aún no tienes conjuros en tu lista: añádelos con «Añadir del grimorio».'),
+      ].filter(Boolean));
+    };
+    pintarLista();
+    document.getElementById('toasts').replaceChildren();
+    const r = await modal(titulo, cuerpo, [{ t: 'Más tarde', v: false }, { t: '✔ Fijar preparación', v: true, clase: 'rojo' }]);
+    if (r) pj.prepVentana = null;
+    guardar(pj); dibujar();
+    if (!r) toast('Puedes terminar de prepararlos en la pestaña Conjuros y pulsar «Fijar».', 4000);
+  }
+  // Intenta marcar o desmarcar un conjuro preparado respetando la ventana y el límite
+  function intentarPreparar(i, marcar) {
+    const x = pj.conjuros[i];
+    const v = ventana();
+    if (!v && !x.extra) { toast(textoVentana(), 4500); return false; }
+    if (marcar && !x.extra) {
+      if (limitePrep() && nPrepActual() >= limitePrep()) { toast(`Ya tienes ${nPrepActual()}/${limitePrep()} preparados. Desmarca otro antes.`, 4000); return false; }
+      if (v.tipo === 'cambios' && !(v.inicial || []).includes(x.n)) { if (v.restantes <= 0) { toast('Ya no te quedan cambios. Pulsa «Fijar».'); return false; } v.restantes--; }
+    }
+    x.prep = marcar;
+    return true;
   }
 
   const limitePrep = () => (c.magia && c.magia.tipo !== 'innata' ? c.magia.preparados : 0);
