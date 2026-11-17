@@ -6,18 +6,43 @@ import { ESPECIES, especie } from '../datos/especies.js';
 import { TRASFONDOS, DOTES, dote } from '../datos/trasfondos.js';
 import { ARMAS, ARMADURAS, PROPIEDADES, MAESTRIAS, arma, armadura } from '../datos/equipo.js';
 import { calcular, validar, tirar, CAR_IDS, periciasMaximas } from '../motor.js';
-import { guardar, borrar, esMio, estado, asignarPartida, reglasDe } from '../almacen.js';
+import { guardar, borrar, esMio, soyDMde, estado, asignarPartida, reglasDe } from '../almacen.js';
+import { asistenteNivel } from './nivel.js';
 import { informeValidacion, metros } from './comun.js';
 import { conjuroPorNombre, LETRA_CLASE } from '../datos/conjuros.js';
 import { fichaConjuro, etiquetasConj, elegirConjuros } from './grimorio.js';
 
 const PESTANAS = [['combate', '⚔ Combate'], ['habilidades', '◎ Habilidades'], ['conjuros', '✧ Conjuros'], ['equipo', '⚖ Equipo'], ['rasgos', '❖ Rasgos'], ['notas', '✎ Notas'], ['revisar', '⚙ Editar y revisar']];
 let pestana = 'combate';
+let modoDM = false;
+const MAX_HISTORIAL = 15;
 
 export function vistaHoja(cont, pjOriginal, irA) {
   const pj = pjOriginal;
-  const ro = !esMio(pj);
+  const dm = soyDMde(pj);
+  let ro = !esMio(pj) && !(dm && modoDM);
   const cambio = (fn) => (...a) => { if (ro) return; fn(...a); guardar(pj); dibujar(); };
+  const cambioH = (desc, fn) => (...a) => { if (ro) return; registrar(desc); fn(...a); guardar(pj); dibujar(); };
+
+  // ---------- Historial para deshacer ----------
+  function registrar(desc) {
+    const h0 = pj.historial?.[0];
+    const quien = estado.usuario?.nombre || pj.jugador || 'Jugador';
+    if (h0 && h0.d === desc && h0.quien === quien && Date.now() - h0.t < 180000 && /Edición|Conjuros|Equipo|Rasgos/.test(desc)) return;
+    const { historial, ...copia } = pj;
+    pj.historial = [{ t: Date.now(), d: desc, quien, dm: !esMio(pj), estado: JSON.parse(JSON.stringify(copia)) }, ...(historial || [])].slice(0, MAX_HISTORIAL);
+  }
+  const FIJOS = ['id', 'owner', 'ownerNombre', 'lectores', 'partida', 'partidaDm', 'partidaNombre', 'historial'];
+  async function restaurar(i) {
+    const e = pj.historial[i];
+    const ok = await confirmar('Deshacer cambios', `La hoja volverá a como estaba antes de «${e.d}» (${new Date(e.t).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}). Se guarda una copia del estado actual por si quieres rehacerlo.`, 'Deshacer');
+    if (!ok) return;
+    registrar(`Antes de deshacer «${e.d}»`);
+    const fijos = Object.fromEntries(FIJOS.map((k) => [k, pj[k]]));
+    for (const k of Object.keys(pj)) if (!FIJOS.includes(k)) delete pj[k];
+    Object.assign(pj, JSON.parse(JSON.stringify(e.estado)), fijos);
+    guardar(pj, true); dibujar(); toast('Cambios deshechos.');
+  }
   let c;
 
   function dibujar() {
@@ -26,7 +51,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     cont.replaceChildren(
       h('div.hoja' + (ro ? '.solo-lectura' : ''), {},
         cabecera(),
-        h('nav.pestanas', {}, PESTANAS.filter(([id]) => !(id === 'revisar' && ro)).map(([id, n]) => h('button' + (pestana === id ? '.sel' : ''), { onclick: () => { pestana = id; dibujar(); } }, n))),
+        h('nav.pestanas', {}, PESTANAS.filter(([id]) => !(id === 'revisar' && ro && !dm)).map(([id, n]) => h('button' + (pestana === id ? '.sel' : ''), { onclick: () => { pestana = id; dibujar(); } }, n))),
         h('div.pestana-cuerpo', {}, ({ combate, habilidades, conjuros, equipo, rasgos, notas, revisar })[pestana]()),
       ),
     );
@@ -60,7 +85,10 @@ export function vistaHoja(cont, pjOriginal, irA) {
           h('button.btn.peq.verde', { onclick: () => pedirPG('cura') }, '+ Curar'),
         ),
       ),
+      dm && h('div.aviso-dm', {}, h('span', {}, modoDM ? '✎ Estás corrigiendo esta hoja como DM.' : '👁 Ves la hoja de tu jugador.'),
+        h('button.btn.peq' + (modoDM ? '.rojo' : ''), { onclick: () => { modoDM = !modoDM; ro = !esMio(pj) && !(dm && modoDM); dibujar(); } }, modoDM ? 'Terminar corrección' : 'Corregir como DM')),
       !ro && h('div.acciones', {},
+        pj.historial?.length ? h('button.btn.peq', { onclick: () => restaurar(0), title: `Deshacer: ${pj.historial[0].d}` }, '↶ Deshacer') : null,
         h('button.btn.peq' + (pj.inspiracion ? '.dorado' : ''), { onclick: cambio(() => { pj.inspiracion = !pj.inspiracion; }), title: 'Inspiración heroica' }, pj.inspiracion ? '★ Inspiración' : '☆ Inspiración'),
         h('button.btn.peq', { onclick: descansoCorto }, '☾ Desc. corto'),
         h('button.btn.peq', { onclick: descansoLargo }, '☀ Desc. largo'),
@@ -185,6 +213,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     const dur = { estandar: '1 hora', heroico: '5 minutos', realista: '8 horas' }[c.reglas.descansos];
     const ok = await confirmar(`Descanso corto (${dur})`, 'Recuperas los recursos de descanso corto (y los espacios de pacto). Puedes gastar dados de golpe desde Combate.', 'Descansar');
     if (!ok) return;
+    registrar('Descanso corto');
     for (const r of c.recursos) if (r.rec === 'corto') pj.recursos[r.id] = 0;
     pj.pactoGastados = 0;
     guardar(pj); pestana = 'combate'; dibujar(); toast('Descanso corto completado.');
@@ -194,6 +223,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     const dur = { estandar: '8 horas', heroico: '1 hora', realista: '7 días' }[c.reglas.descansos];
     const ok = await confirmar(`Descanso largo (${dur})`, 'Recuperas todos los PG, los dados de golpe, los espacios de conjuro y los recursos. Pierdes 1 nivel de agotamiento.', 'Descansar');
     if (!ok) return;
+    registrar('Descanso largo');
     pj.pg.actual = c.pgMax; pj.pg.temp = 0; pj.dadosGolpeGastados = 0;
     pj.recursos = {}; pj.espaciosGastados = {}; pj.pactoGastados = 0;
     pj.agotamiento = Math.max(0, (pj.agotamiento || 0) - 1); pj.muerte = { ok: 0, ko: 0 }; pj.concentracion = null;
@@ -202,31 +232,15 @@ export function vistaHoja(cont, pjOriginal, irA) {
   }
 
   async function subirNivel() {
-    const nv = pj.nivel + 1; const cl = c.cl;
-    if (!cl) return;
-    const nuevos = [...cl.rasgos, ...cl.subclase.rasgos].filter((r) => r.nv === nv);
-    const media = cl.dg / 2 + 1;
-    const modoPG = c.reglas.pgNivel;
-    let valor = modoPG === 'tirada' ? tirar(`1d${cl.dg}`).total : media;
-    const sel = modoPG !== 'eleccion' ? h('p', {}, modoPG === 'media' ? `Tu DM usa la media: ${media} + Con (${fmt(c.mod.CON)}).` : `Tu DM pide tirar: sacas ${valor} en 1d${cl.dg}, + Con (${fmt(c.mod.CON)}).`) : h('div', {},
-      h('p', {}, `PG que ganas: media ${media} + Con (${fmt(c.mod.CON)}) o tira 1d${cl.dg}.`),
-      h('div.segmentado', {},
-        h('button.sel', { onclick: (e) => { valor = media; e.target.parentNode.querySelectorAll('button').forEach((b) => b.classList.remove('sel')); e.target.classList.add('sel'); res.textContent = `+${Math.max(1, media + c.mod.CON)} PG`; } }, 'Media'),
-        h('button', { onclick: (e) => { valor = tirar(`1d${cl.dg}`).total; e.target.parentNode.querySelectorAll('button').forEach((b) => b.classList.remove('sel')); e.target.classList.add('sel'); res.textContent = `Sacas ${valor}: +${Math.max(1, valor + c.mod.CON)} PG`; } }, `🎲 Tirar d${cl.dg}`)),
-    );
-    const res = h('p.grande', {}, `+${Math.max(1, valor + c.mod.CON)} PG`);
-    const r = await modal(`Subir a nivel ${nv}`, h('div', {}, sel, res,
-      h('h4', {}, 'Nuevos rasgos'), nuevos.length ? nuevos.map((x) => h('p.peq', {}, h('b', {}, x.n + '. '), x.d)) : h('p.peq', {}, 'Solo mejoras numéricas (conjuros, recursos…).'),
-      nuevos.some((x) => x.mejora) && h('p.ayuda', {}, 'Reparte la mejora de característica (o elige dote) en "Editar y revisar".'),
-      (PX[nv - 1] > (pj.px || 0) && pj.px) ? h('p.peq', {}, `Necesitas ${PX[nv - 1]} PX para este nivel.`) : null,
-    ), [{ t: 'Cancelar', v: false }, { t: 'Subir nivel', v: true, clase: 'rojo' }]);
-    if (!r) return;
+    if (!c.cl) return toast('Primero elige una clase en «Editar y revisar».');
+    const aplicar = await asistenteNivel(pj, reglasDe(pj));
+    if (!aplicar) return;
+    registrar(`Subida a nivel ${pj.nivel + 1}`);
     const antes = c.pgMax;
-    pj.pg.tiradas[nv - 2] = valor === media ? null : valor;
-    pj.nivel = nv;
+    aplicar(pj);
     const despues = calcular(pj, reglasDe(pj)).pgMax;
     pj.pg.actual = (pj.pg.actual ?? antes) + (despues - antes);
-    guardar(pj, true); dibujar(); toast(`¡Nivel ${nv}!`);
+    guardar(pj, true); dibujar(); toast(`¡Nivel ${pj.nivel}! Si te equivocaste, pulsa «Deshacer».`, 4000);
   }
 
   // ---------- Habilidades ----------
@@ -272,6 +286,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
         h('button.btn.rojo', { onclick: async () => {
           const nuevos = await elegirConjuros({ claseId: pj.clase, maxNv: m && m.tipo !== 'innata' ? maxNv : null, yaTiene: new Set(lista.map((s) => s.g?.id).filter(Boolean)) });
           if (!nuevos.length) return;
+          registrar('Conjuros');
           for (const s of nuevos) pj.conjuros.push({ n: s.n, nv: s.nv, prep: true });
           guardar(pj); dibujar(); toast(`${nuevos.length} conjuro(s) añadidos`);
         } }, '✧ Añadir del grimorio')),
@@ -284,7 +299,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
             !ro && h('button.btn.peq.lanzar', { onclick: (e) => { e.preventDefault(); lanzar(s); } }, 'Lanzar'),
           ),
           s.g ? fichaConjuro(s.g) : h('p.peq', {}, s.notas || 'Conjuro anotado a mano.'),
-          !ro && h('button.x', { onclick: cambio(() => { pj.conjuros.splice(s.i, 1); }) }, '× quitar'),
+          !ro && h('button.x', { onclick: cambioH('Conjuros', () => { pj.conjuros.splice(s.i, 1); }) }, '× quitar'),
         )),
       )) : h('p.peq', {}, 'Aún no hay conjuros. Añádelos desde el grimorio.'),
       !ro && h('details', {}, h('summary.peq', {}, 'Anotar un conjuro a mano'), formConjuro()),
@@ -369,7 +384,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
         h('span.item-n', {}, e.n, e.ref && h('small', {}, ' ', detalleRef(e.ref))),
         h('input.num.cant', { type: 'number', min: 0, value: e.c ?? 1, disabled: ro, title: 'Cantidad', onchange: cambio((ev) => { pj.equipo[i].c = Number(ev.target.value); }) }),
         k.activa && h('input.num.kg', { type: 'number', min: 0, step: 0.1, value: e.kg ?? k.pesoItem(e), disabled: ro, title: 'Peso por unidad (kg)', onchange: cambio((ev) => { pj.equipo[i].kg = ev.target.value === '' ? null : Number(ev.target.value); }) }),
-        !ro && h('button.x', { onclick: cambio(() => { pj.equipo.splice(i, 1); }) }, '×'),
+        !ro && h('button.x', { onclick: cambioH('Equipo', () => { pj.equipo.splice(i, 1); }) }, '×'),
       ))),
       k.activa ? h('p.peq', {}, 'Columnas: cantidad · peso por unidad (kg). Ajusta el peso si no coincide.') : h('p.peq', {}, `Peso total aproximado: ${kg(k.peso)}`),
       !ro && formItem(),
@@ -396,7 +411,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       h('optgroup', { label: 'Armaduras' }, ARMADURAS.map((a) => h('option', { value: 'a:' + a.id }, a.n))));
     const n = h('input', { placeholder: 'Nombre (objeto libre)' });
     const cant = h('input.num', { type: 'number', value: 1, min: 1 });
-    return h('div.form-linea', {}, sel, n, cant, h('button.btn.peq.rojo', { onclick: cambio(() => {
+    return h('div.form-linea', {}, sel, n, cant, h('button.btn.peq.rojo', { onclick: cambioH('Equipo', () => {
       const ref = sel.value || null;
       const nombre = n.value.trim() || (ref ? (ref.startsWith('w:') ? arma(ref.slice(2)).n : armadura(ref.slice(2)).n) : '');
       if (!nombre) return;
@@ -429,17 +444,19 @@ export function vistaHoja(cont, pjOriginal, irA) {
 
   // ---------- Editar y revisar ----------
   function revisar() {
+    const cambioRev = (fn) => cambioH('Edición en «Editar y revisar»', fn);
     const cl = clase(pj.clase); const es = especie(pj.especie);
-    const sel = (valor, opciones, set) => h('select', { onchange: cambio((e) => set(e.target.value || null)) }, h('option', { value: '' }, '—'), opciones.map(([v, n]) => h('option', { value: v, selected: valor === v }, n)));
-    const num = (valor, set, attrs = {}) => h('input.num', { type: 'number', value: valor ?? '', ...attrs, onchange: cambio((e) => set(e.target.value === '' ? null : Number(e.target.value))) });
+    const sel = (valor, opciones, set) => h('select', { onchange: cambioRev((e) => set(e.target.value || null)) }, h('option', { value: '' }, '—'), opciones.map(([v, n]) => h('option', { value: v, selected: valor === v }, n)));
+    const num = (valor, set, attrs = {}) => h('input.num', { type: 'number', value: valor ?? '', ...attrs, onchange: cambioRev((e) => set(e.target.value === '' ? null : Number(e.target.value))) });
     const maxPer = periciasMaximas(pj);
     return [
+      historialUI(),
       h('h3', {}, 'Comprobación de reglas'),
       informeValidacion(validar(pj, reglasDe(pj))),
       h('h3', {}, 'Identidad'),
       h('div.form-grid', {},
-        campo('Nombre', h('input', { value: pj.nombre, onchange: cambio((e) => { pj.nombre = e.target.value; }) })),
-        campo('Jugador', h('input', { value: pj.jugador || '', onchange: cambio((e) => { pj.jugador = e.target.value; }) })),
+        campo('Nombre', h('input', { value: pj.nombre, onchange: cambioRev((e) => { pj.nombre = e.target.value; }) })),
+        campo('Jugador', h('input', { value: pj.jugador || '', onchange: cambioRev((e) => { pj.jugador = e.target.value; }) })),
         campo('Nivel', num(pj.nivel, (v) => { pj.nivel = Math.max(1, Math.min(20, v || 1)); }, { min: 1, max: 20 })),
         campo('Clase', sel(pj.clase, CLASES.map((x) => [x.id, x.n]), (v) => { pj.clase = v; pj.eleccion1 = null; })),
         cl?.eleccion1 && campo(cl.eleccion1.n, sel(pj.eleccion1, cl.eleccion1.lista.map((o) => [o.id, o.n]), (v) => { pj.eleccion1 = v; })),
@@ -461,13 +478,13 @@ export function vistaHoja(cont, pjOriginal, irA) {
       ),
       h('p.peq', {}, 'Ajuste: objetos mágicos u otros efectos fuera de las reglas de creación.'),
       h('h3', {}, 'Dotes'),
-      h('div.chips', {}, DOTES.filter((d) => d.id !== 'mejora_caracteristica').map((d) => h('button.chip' + (pj.dotes.includes(d.id) ? '.sel' : ''), { onclick: cambio(() => { pj.dotes = pj.dotes.includes(d.id) ? pj.dotes.filter((x) => x !== d.id) : [...pj.dotes, d.id]; }) }, d.n))),
+      h('div.chips', {}, DOTES.filter((d) => d.id !== 'mejora_caracteristica').map((d) => h('button.chip' + (pj.dotes.includes(d.id) ? '.sel' : ''), { onclick: cambioRev(() => { pj.dotes = pj.dotes.includes(d.id) ? pj.dotes.filter((x) => x !== d.id) : [...pj.dotes, d.id]; }) }, d.n))),
       c.tf && h('p.peq', {}, `La dote del trasfondo (${dote(c.tf.dote).n}) se aplica sola.`),
       h('h3', {}, 'Habilidades'),
       h('p.ayuda', {}, maxPer ? 'Toca: ninguna → competente → pericia → ninguna.' : 'Toca para marcar o desmarcar la competencia.'),
       h('div.lista-hab', {}, HABILIDADES.map((x) => {
         const v = pj.habilidades[x.id] || 0;
-        return h('button.hab' + (v === 1 ? '.comp' : v === 2 ? '.pericia' : ''), { onclick: cambio(() => { const s = v === 0 ? 1 : v === 1 && maxPer ? 2 : 0; if (s) pj.habilidades[x.id] = s; else delete pj.habilidades[x.id]; }) },
+        return h('button.hab' + (v === 1 ? '.comp' : v === 2 ? '.pericia' : ''), { onclick: cambioRev(() => { const s = v === 0 ? 1 : v === 1 && maxPer ? 2 : 0; if (s) pj.habilidades[x.id] = s; else delete pj.habilidades[x.id]; }) },
           h('span.marca', {}, v === 2 ? '◆' : v === 1 ? '●' : '○'), x.n, h('small', {}, x.c));
       })),
       h('h3', {}, 'Combate'),
@@ -478,16 +495,27 @@ export function vistaHoja(cont, pjOriginal, irA) {
       ),
       h('p.peq', {}, 'Deja en blanco PG y CA para que se calculen solos. Si los rellenas, la revisión comprobará que sean posibles.'),
       h('h3', {}, 'Idiomas'),
-      h('div.chips', {}, [...IDIOMAS_ESTANDAR, ...IDIOMAS_RAROS].map((i) => h('button.chip' + (pj.idiomas.includes(i) ? '.sel' : ''), { onclick: cambio(() => { pj.idiomas = pj.idiomas.includes(i) ? pj.idiomas.filter((x) => x !== i) : [...pj.idiomas, i]; }) }, i))),
-      campo('Herramientas (separadas por comas)', h('input', { value: (pj.herramientas || []).join(', '), onchange: cambio((e) => { pj.herramientas = e.target.value.split(',').map((s) => s.trim()).filter(Boolean); }) })),
+      h('div.chips', {}, [...IDIOMAS_ESTANDAR, ...IDIOMAS_RAROS].map((i) => h('button.chip' + (pj.idiomas.includes(i) ? '.sel' : ''), { onclick: cambioRev(() => { pj.idiomas = pj.idiomas.includes(i) ? pj.idiomas.filter((x) => x !== i) : [...pj.idiomas, i]; }) }, i))),
+      campo('Herramientas (separadas por comas)', h('input', { value: (pj.herramientas || []).join(', '), onchange: cambioRev((e) => { pj.herramientas = e.target.value.split(',').map((s) => s.trim()).filter(Boolean); }) })),
       h('h3', {}, 'Partida y copia de seguridad'),
-      partidaSelector(),
+      esMio(pj) ? partidaSelector() : null,
       h('div.acciones', {},
         h('button.btn', { onclick: () => descargar(`${(pj.nombre || 'personaje').replace(/\W+/g, '_')}.json`, JSON.stringify(pj, null, 2)) }, '⬇ Exportar JSON'),
         h('button.btn', { onclick: () => window.print() }, '🖶 Imprimir'),
-        h('button.btn.rojo', { onclick: async () => { if (await confirmar('Borrar personaje', `¿Seguro que quieres borrar a ${pj.nombre || 'este personaje'}? No se puede deshacer.`, 'Borrar')) { await borrar(pj.id); irA('#/'); } } }, '🗑 Borrar'),
+        esMio(pj) && h('button.btn.rojo', { onclick: async () => { if (await confirmar('Borrar personaje', `¿Seguro que quieres borrar a ${pj.nombre || 'este personaje'}? No se puede deshacer.`, 'Borrar')) { await borrar(pj.id); irA('#/'); } } }, '🗑 Borrar'),
       ),
     ];
+  }
+
+  function historialUI() {
+    const lista = pj.historial || [];
+    return h('details.historial-hoja', {},
+      h('summary', {}, h('h3', {}, `Historial (${lista.length})`), h('small', {}, 'Vuelve a cualquier punto anterior: subidas de nivel, descansos y ediciones.')),
+      lista.length ? lista.map((e, i) => h('div.item', {},
+        h('span.item-n', {}, h('b', {}, e.d), h('small', {}, ` · ${new Date(e.t).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })} · ${e.quien}${e.dm ? ' (DM)' : ''}`)),
+        !ro && h('button.btn.peq', { onclick: () => restaurar(i) }, '↶ Volver aquí'))) : h('p.peq', {}, 'Aún no hay cambios guardados.'),
+      ro && dm ? h('p.peq', {}, 'Pulsa «Corregir como DM» arriba para poder deshacer cambios.') : null,
+    );
   }
 
   function partidaSelector() {

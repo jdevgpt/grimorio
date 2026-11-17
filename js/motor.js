@@ -315,7 +315,7 @@ export function validar(pj, reglasMesa) {
   const dotesGen = (pj.dotes || []).filter((d) => dote(d)?.tipo === 'general' && d !== 'mejora_caracteristica').length;
   const dotesEst = (pj.dotes || []).filter((d) => dote(d)?.tipo === 'estilo').length;
   const puntos = CAR_IDS.reduce((s, c) => s + Number(pj.mejoras[c] || 0), 0);
-  const permitidos = (nMej - dotesGen) * 2 + (pj.dotes || []).filter((d) => d === 'agarrador').length;
+  const permitidos = (nMej - dotesGen) * 2 + (pj.dotes || []).filter((d) => d === 'agarrador' || dote(d)?.tipo === 'epico').length;
   if (puntos > permitidos) err(`Has repartido ${puntos} puntos de mejora de característica; a nivel ${pj.nivel} te corresponden como máximo ${Math.max(0, permitidos)} (${nMej} mejoras${dotesGen ? `, ${dotesGen} cambiadas por dotes` : ''}).`);
   else if (puntos < permitidos) av(`Te quedan ${permitidos - puntos} puntos de mejora de característica por repartir (o dotes por elegir).`);
   const estilosEsperados = ({ guerrero: 1, paladin: pj.nivel >= 2 ? 1 : 0, explorador: pj.nivel >= 2 ? 1 : 0 }[pj.clase] || 0) + (pj.clase === 'guerrero' && pj.nivel >= 7 ? 1 : 0);
@@ -330,7 +330,8 @@ export function validar(pj, reglasMesa) {
 
   // Puntuaciones finales
   const car = caracFinales(pj);
-  const tope = (c) => (pj.nivel >= 20 && ((pj.clase === 'barbaro' && ['FUE', 'CON'].includes(c)) || (pj.clase === 'monje' && ['DES', 'SAB'].includes(c)))) ? 25 : 20;
+  const conEpico = (pj.dotes || []).some((d) => dote(d)?.tipo === 'epico');
+  const tope = (c) => conEpico ? 30 : (pj.nivel >= 20 && ((pj.clase === 'barbaro' && ['FUE', 'CON'].includes(c)) || (pj.clase === 'monje' && ['DES', 'SAB'].includes(c)))) ? 25 : 20;
   for (const c of CAR_IDS) {
     const sinAjuste = car[c] - Number(pj.ajustes?.[c] || 0);
     if (sinAjuste > tope(c)) err(`${c} ${sinAjuste} supera el máximo de ${tope(c)}.`);

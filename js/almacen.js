@@ -66,14 +66,17 @@ export async function salir() { await fb.a.signOut(fb.auth); }
 export const misPersonajes = () => Object.values(estado.personajes).filter((p) => !estado.usuario || p.owner === estado.usuario.uid).sort((a, b) => (b.actualizado || 0) - (a.actualizado || 0));
 export const personaje = (id) => estado.personajes[id];
 export const esMio = (pj) => !estado.usuario || pj.owner === estado.usuario.uid;
+export const soyDMde = (pj) => !!estado.usuario && !!pj.partida && pj.partidaDm === estado.usuario.uid && pj.owner !== estado.usuario.uid;
 
 const pendientes = new Map();
 export function guardar(pj, inmediato = false) {
   pj.actualizado = Date.now();
   estado.personajes[pj.id] = pj;
   if (!estado.usuario) { guardarLocal(CLAVE, estado.personajes); avisar(); return Promise.resolve(); }
-  pj.owner = estado.usuario.uid; pj.ownerNombre = estado.usuario.nombre;
-  pj.lectores = lectoresDe(pj);
+  if (!pj.owner || pj.owner === estado.usuario.uid) {
+    pj.owner = estado.usuario.uid; pj.ownerNombre = estado.usuario.nombre;
+    pj.lectores = lectoresDe(pj);
+  } // si lo guarda el DM, no cambia ni el dueño ni quién puede leerlo
   clearTimeout(pendientes.get(pj.id));
   const escribir = () => fb.f.setDoc(fb.f.doc(fb.db, 'personajes', pj.id), JSON.parse(JSON.stringify(pj))).catch((e) => console.warn(e));
   if (inmediato) return escribir();

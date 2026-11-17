@@ -25,6 +25,7 @@ export function h(tag, attrs = {}, ...hijos) {
 export function toast(msg, ms = 2600) {
   const zona = document.getElementById('toasts');
   const t = h('div.toast', {}, msg);
+  while (zona.children.length >= 2) zona.firstChild.remove();
   zona.append(t);
   setTimeout(() => t.classList.add('fuera'), ms);
   setTimeout(() => t.remove(), ms + 400);
@@ -75,6 +76,7 @@ export function mostrarTirada(etiqueta, expr) {
   estadoDados.historial = estadoDados.historial.slice(0, 50);
   const zona = document.getElementById('toasts');
   const t = h('div.toast.tirada', {}, h('span.tir-et', {}, etiqueta), h('strong.tir-total', {}, r.total), h('span.tir-det', {}, `${expr} → ${r.detalle}${extra}`));
+  while (zona.children.length >= 2) zona.firstChild.remove();
   zona.append(t);
   setTimeout(() => t.classList.add('fuera'), 4200);
   setTimeout(() => t.remove(), 4600);

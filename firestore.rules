@@ -26,10 +26,18 @@ service cloud.firestore {
         && request.resource.data.owner == request.auth.uid
         && request.auth.uid in request.resource.data.lectores
         && request.resource.data.lectores.size() <= 2;
-      allow update: if request.auth != null
-        && resource.data.owner == request.auth.uid
-        && request.resource.data.owner == request.auth.uid
-        && request.resource.data.lectores.size() <= 2;
+      allow update: if request.auth != null && (
+        // El jugador edita su hoja
+        (resource.data.owner == request.auth.uid
+          && request.resource.data.owner == request.auth.uid
+          && request.resource.data.lectores.size() <= 2)
+        // El DM de la partida puede corregir o deshacer, sin cambiar dueño, lectores ni partida
+        || (resource.data.partidaDm == request.auth.uid
+          && request.resource.data.owner == resource.data.owner
+          && request.resource.data.lectores == resource.data.lectores
+          && request.resource.data.partida == resource.data.partida
+          && request.resource.data.partidaDm == resource.data.partidaDm)
+      );
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
   }
