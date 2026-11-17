@@ -341,7 +341,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       const opciones = [];
       if (m?.pacto && m.pacto.nivel >= s.nv && (pj.pactoGastados || 0) < m.pacto.n) opciones.push({ t: `Espacio de pacto (nv ${m.pacto.nivel})`, v: 'p' });
       (m?.espacios || []).forEach((n, i) => { const nv = i + 1; if (nv >= s.nv && (pj.espaciosGastados[nv] || 0) < n) opciones.push({ t: `Nivel ${nv} (${n - (pj.espaciosGastados[nv] || 0)} libres)`, v: nv }); });
-      const botones = [...opciones.map((o) => ({ ...o, clase: 'rojo' })), { t: 'Sin gastar espacio', v: 0 }, { t: 'Cancelar', v: null }];
+      const botones = [...opciones.map((o) => ({ ...o, clase: 'rojo' })), { t: 'Sin gastar espacio', v: 0 }, { t: 'Cancelar', v: 'cancelar' }];
       const r = await modal(`Lanzar ${s.n}`, h('div', {},
         g && h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración' : g.du}`),
         g && h('div.que-hace', {}, h('h4', {}, 'Qué hace'), h('p', {}, g.d), g.s ? h('p.peq', {}, h('b', {}, 'Con un espacio de nivel superior: '), g.s) : null,
@@ -349,7 +349,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
           g.ritual ? h('p.peq', {}, '📜 También se puede lanzar como ritual (10 minutos más, sin gastar espacio).') : null),
         h('p', {}, opciones.length ? '¿Con qué espacio?' : 'No te quedan espacios del nivel necesario.'),
         h('p.peq', {}, '«Sin gastar espacio»: rituales, rasgos que lo permiten o usos gratuitos.')), botones);
-      if (r === null || r === undefined) return;
+      if (r === null || r === undefined || r === 'cancelar') return;
       if (r === 'p') { pj.pactoGastados = (pj.pactoGastados || 0) + 1; nivelEspacio = m.pacto.nivel; }
       else if (r > 0) { pj.espaciosGastados[r] = (pj.espaciosGastados[r] || 0) + 1; nivelEspacio = r; }
     }

@@ -67,7 +67,7 @@ export function modal(titulo, contenido, botones = [{ t: 'Cerrar' }], opciones =
     const caja = h('div.modal', {},
       h('h2', {}, titulo),
       h('div.modal-cuerpo', {}, contenido),
-      h('div.modal-botones' + (opciones.vertical || botones.length > 2 ? '.vertical' : ''), {}, botones.map((b) => h('button.btn' + (b.clase ? '.' + b.clase : ''), { onclick: () => cerrar(b.v ?? b.t) }, b.t))),
+      h('div.modal-botones' + (opciones.vertical || botones.length > 2 ? '.vertical' : ''), {}, botones.map((b) => h('button.btn' + (b.clase ? '.' + b.clase : ''), { onclick: () => cerrar('v' in b ? b.v : b.t) }, b.t))),
     );
     fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(null); });
     fondo.append(caja);
