@@ -344,7 +344,9 @@ export function vistaHoja(cont, pjOriginal, irA) {
       const botones = [...opciones.map((o) => ({ ...o, clase: 'rojo' })), { t: 'Sin gastar espacio', v: 0 }, { t: 'Cancelar', v: null }];
       const r = await modal(`Lanzar ${s.n}`, h('div', {},
         g && h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración' : g.du}`),
-        g && h('div.que-hace', {}, h('h4', {}, 'Qué hace'), h('p', {}, g.d), g.s ? h('p.peq', {}, h('b', {}, 'Con un espacio de nivel superior: '), g.s) : null),
+        g && h('div.que-hace', {}, h('h4', {}, 'Qué hace'), h('p', {}, g.d), g.s ? h('p.peq', {}, h('b', {}, 'Con un espacio de nivel superior: '), g.s) : null,
+          g.conc ? h('p.peq.aviso-conc', {}, `◉ Requiere concentración (${g.du.toLowerCase()}). Si recibes daño, haz una salvación de Constitución para mantenerlo.`) : null,
+          g.ritual ? h('p.peq', {}, '📜 También se puede lanzar como ritual (10 minutos más, sin gastar espacio).') : null),
         h('p', {}, opciones.length ? '¿Con qué espacio?' : 'No te quedan espacios del nivel necesario.'),
         h('p.peq', {}, '«Sin gastar espacio»: rituales, rasgos que lo permiten o usos gratuitos.')), botones);
       if (r === null || r === undefined) return;
@@ -409,7 +411,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     document.getElementById('toasts').replaceChildren();
     modal(`✧ ${titulo}`, h('div.lanzamiento', {},
       h('p.peq', {}, `${g.t} · ${g.a} · ${g.c} · ${g.conc ? 'Concentración, ' + g.du.toLowerCase() : g.du}`),
-      explicacion, ...pasos, zonaDano), [{ t: 'Cerrar' }]);
+      s.nv === 0 ? explicacion : null, ...pasos, zonaDano), [{ t: 'Cerrar' }]);
   }
 
   // Ajusta los dados del conjuro al nivel del espacio o del personaje (trucos)
