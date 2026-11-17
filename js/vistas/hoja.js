@@ -287,19 +287,33 @@ export function vistaHoja(cont, pjOriginal, irA) {
       }))] : null,
       m?.pacto ? [h('h3', {}, `Espacios de pacto (nivel ${m.pacto.nivel})`), h('div.espacio', {}, marcas(m.pacto.n - (pj.pactoGastados || 0), m.pacto.n, (q) => { pj.pactoGastados = m.pacto.n - q; })), h('p.peq', {}, 'Se recuperan con un descanso corto o largo.')] : null,
       h('h3', {}, 'Mis conjuros'),
+      m && m.tipo !== 'innata' ? h('p.peq', {}, `☑ = preparado. Puedes tener ${m.preparados} preparados${pj.clase === 'mago' ? '; el resto quedan en tu libro de conjuros' : ''}. Los que no marques siguen en tu lista para cambiarlos tras un descanso largo.`) : null,
       !ro && h('div.acciones', {},
         h('button.btn.rojo', { onclick: async () => {
           const nuevos = await elegirConjuros({ claseId: pj.clase, maxNv: m && m.tipo !== 'innata' ? maxNv : null, yaTiene: new Set(lista.map((s) => s.g?.id).filter(Boolean)) });
           if (!nuevos.length) return;
           registrar('Conjuros');
-          for (const s of nuevos) pj.conjuros.push({ n: s.n, nv: s.nv, prep: true });
+          let sinPreparar = 0;
+          for (const s of nuevos) {
+            const prep = s.nv === 0 || !limitePrep() || nPrepActual() < limitePrep();
+            if (!prep) sinPreparar++;
+            pj.conjuros.push({ n: s.n, nv: s.nv, prep });
+          }
+          if (sinPreparar) setTimeout(() => toast(`${sinPreparar} se han añadido sin preparar porque ya tenías el máximo. Puedes cambiar cuáles preparas con las casillas.`, 5000), 400);
           guardar(pj); dibujar(); toast(`${nuevos.length} conjuro(s) añadidos`);
         } }, '✧ Añadir del grimorio')),
       Object.keys(porNivel).length ? Object.entries(porNivel).map(([nv, ss]) => h('div.grupo-conj', {},
         h('h4', {}, nv === '0' ? 'Trucos' : `Nivel ${nv}`),
         ss.map((s) => h('details.conjuro', {},
           h('summary', {},
-            s.nv > 0 && !s.siempre ? h('input', { type: 'checkbox', checked: !!s.prep, title: 'Preparado', onclick: (e) => e.stopPropagation(), onchange: cambio((e) => { pj.conjuros[s.i].prep = e.target.checked; }) }) : h('span.marca', {}, '✦'),
+            s.nv > 0 && !s.siempre ? h('input', { type: 'checkbox', checked: !!s.prep, title: s.prep ? 'Preparado (toca para quitar)' : 'Sin preparar (toca para preparar)', onclick: (e) => e.stopPropagation(), onchange: (e) => {
+              if (ro) return;
+              if (e.target.checked && limitePrep() && nPrepActual() >= limitePrep() && !s.extra) {
+                e.target.checked = false;
+                return toast(`Ya tienes ${nPrepActual()}/${limitePrep()} conjuros preparados. Desmarca otro antes de preparar este.`, 4500);
+              }
+              pj.conjuros[s.i].prep = e.target.checked; guardar(pj); dibujar();
+            } }) : h('span.marca', {}, '✦'),
             h('span.conj-n', {}, h('b', {}, s.n), ' ', s.g ? etiquetasConj(s.g) : null, s.fuente ? h('small', {}, ` · ${s.fuente}`) : '', s.g && !s.extra && m && pj.clase && !s.g.cl.includes(LETRA_CLASE[pj.clase]) ? h('small.mal', {}, ' · fuera de tu lista') : null),
             !ro && h('button.btn.peq.lanzar', { onclick: (e) => { e.preventDefault(); lanzar(s); } }, 'Lanzar'),
           ),
@@ -310,6 +324,9 @@ export function vistaHoja(cont, pjOriginal, irA) {
       !ro && h('details', {}, h('summary.peq', {}, 'Anotar un conjuro a mano'), formConjuro()),
     ];
   }
+
+  const limitePrep = () => (c.magia && c.magia.tipo !== 'innata' ? c.magia.preparados : 0);
+  const nPrepActual = () => (pj.conjuros || []).filter((x) => Number(x.nv) > 0 && x.prep && !x.siempre && !x.extra).length;
 
   function concentracionAviso() {
     if (!pj.concentracion) return null;

@@ -394,9 +394,17 @@ function pasoConjuros(re) {
     if (c.magia.trucos) secciones.push(selector({ clave: 'trucos', titulo: `Trucos de ${cl.n.toLowerCase()}`, max: c.magia.trucos,
       lista: CONJUROS.filter((s) => s.nv === 0 && deClase(s, letra)), es: (x) => !x.extra && Number(x.nv) === 0, nuevo: (s) => ({ n: s.n, nv: 0, prep: true }) }, re));
     secciones.push(selector({ clave: 'prep', titulo: pj.clase === 'mago' ? 'Conjuros preparados (de tu libro de conjuros)' : 'Conjuros preparados',
-      ayuda: `Hasta nivel ${maxNv}. Podrás cambiarlos más adelante${pj.clase === 'mago' ? '; tu libro empieza con 6 conjuros de nivel 1 (anótalos en Notas si quieres llevar la lista completa)' : ' tras un descanso largo'}.`,
+      ayuda: `Hasta nivel ${maxNv}. Podrás cambiarlos más adelante${pj.clase === 'mago' ? '; abajo puedes completar tu libro de conjuros' : ' tras un descanso largo'}.`,
       max: c.magia.preparados, lista: CONJUROS.filter((s) => s.nv >= 1 && s.nv <= maxNv && deClase(s, letra)),
-      es: (x) => !x.extra && Number(x.nv) > 0, nuevo: (s) => ({ n: s.n, nv: s.nv, prep: true }) }, re));
+      es: (x) => !x.extra && Number(x.nv) > 0 && x.prep !== false, nuevo: (s) => ({ n: s.n, nv: s.nv, prep: true }) }, re));
+    if (pj.clase === 'mago') {
+      const libro = 6 + 2 * (pj.nivel - 1);
+      const resto = Math.max(0, libro - c.magia.preparados);
+      if (resto) secciones.push(selector({ clave: 'libro', titulo: 'Resto de tu libro de conjuros (sin preparar)',
+        ayuda: `Tu libro tiene ${libro} conjuros a tu nivel: los ${c.magia.preparados} preparados y ${resto} más que podrás preparar otro día.`,
+        max: resto, lista: CONJUROS.filter((s) => s.nv >= 1 && s.nv <= maxNv && deClase(s, letra)),
+        es: (x) => !x.extra && Number(x.nv) > 0 && x.prep === false, nuevo: (s) => ({ n: s.n, nv: s.nv, prep: false }) }, re));
+    }
   }
   const dotesMagia = [trasfondo(pj.trasfondo)?.dote, ...pj.dotes].map(dote).filter((d) => d?.magia);
   for (const d of dotesMagia) {
@@ -425,14 +433,15 @@ function selector({ clave, titulo, ayuda, max, lista, es, nuevo }, re) {
   const resultados = h('div.sel-lista-paso');
   const pintarResultados = (filtro) => resultados.replaceChildren(...lista.filter((s) => !filtro || norm(s.n).includes(filtro) || norm(s.d).includes(filtro)).map((s) => {
     const sel = nombres.has(s.n);
-    return h('details.sel-conj-paso' + (sel ? '.sel' : ''), {},
+    const enOtro = !sel && pj.conjuros.some((x) => x.n === s.n);
+    return h('details.sel-conj-paso' + (sel ? '.sel' : '') + (enOtro ? '.otro' : ''), {},
       h('summary', {},
-        h('input', { type: 'checkbox', checked: sel, disabled: !sel && lleno, onclick: (e) => e.stopPropagation(), onchange: (e) => {
+        h('input', { type: 'checkbox', checked: sel || enOtro, disabled: (!sel && lleno) || enOtro, onclick: (e) => e.stopPropagation(), onchange: (e) => {
           if (e.target.checked) { if (pj.conjuros.filter(es).length >= max) { e.target.checked = false; return toast(`Máximo ${max}.`); } pj.conjuros.push(nuevo(s)); }
           else { const i = pj.conjuros.findIndex((x) => es(x) && x.n === s.n); if (i >= 0) pj.conjuros.splice(i, 1); }
           re();
         } }),
-        h('span', {}, h('b', {}, s.n), ' ', etiquetasConj(s), h('small', {}, ` ${nivelTexto(s.nv)} · ${s.escuela}`))),
+        h('span', {}, h('b', {}, s.n), ' ', etiquetasConj(s), h('small', {}, ` ${nivelTexto(s.nv)} · ${s.escuela}${enOtro ? ' · ya elegido' : ''}`))),
       fichaConjuro(s));
   }));
   pintarResultados(q);

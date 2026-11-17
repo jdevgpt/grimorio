@@ -578,3 +578,4 @@ body:has(.modal-fondo) #toasts { top: calc(70px + env(safe-area-inset-top)); bot
 .que-hace h4 { margin: .1em 0 .3em; }
 .que-hace p { margin: .3em 0; }
 .aviso-conc { color: var(--lacre-2); }
+.sel-conj-paso.otro { opacity: .55; }
