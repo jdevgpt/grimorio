@@ -9,7 +9,7 @@ import { calcular, validar, tirar, CAR_IDS, periciasMaximas } from '../motor.js'
 import { guardar, borrar, esMio, soyDMde, estado, asignarPartida, reglasDe } from '../almacen.js';
 import { asistenteNivel } from './nivel.js';
 import { informeValidacion, metros } from './comun.js';
-import { conjuroPorNombre, LETRA_CLASE } from '../datos/conjuros.js';
+import { conjuroPorNombre, LETRA_CLASE, resolucion } from '../datos/conjuros.js';
 import { fichaConjuro, etiquetasConj, elegirConjuros } from './grimorio.js';
 
 const PESTANAS = [['combate', '⚔ Combate'], ['habilidades', '◎ Habilidades'], ['conjuros', '✧ Conjuros'], ['equipo', '⚖ Equipo'], ['rasgos', '❖ Rasgos'], ['notas', '✎ Notas'], ['revisar', '⚙ Editar y revisar']];
@@ -338,11 +338,51 @@ export function vistaHoja(cont, pjOriginal, irA) {
       pj.concentracion = s.n;
     }
     guardar(pj); dibujar();
-    if (g?.x) {
-      const expr = escalarTirada(g, nivelEspacio);
-      const curacion = /curaci|recupera/i.test(g.d) && !/necr|fuego|radiante|ácido/i.test(g.d.split('.')[0]);
-      setTimeout(() => mostrarTirada(`${s.n}${nivelEspacio > s.nv ? ` (nv ${nivelEspacio})` : ''}${curacion ? ': curación' : ''}`, expr), 150);
-    } else toast(`Lanzas ${s.n}.`);
+    if (!g) return toast(`Lanzas ${s.n}.`);
+    const res = resolucion(g);
+    if (!g.x && !res.ataque && !res.salvacion) return toast(`Lanzas ${s.n}.`);
+    setTimeout(() => panelLanzamiento(s, g, res, nivelEspacio), 120);
+  }
+
+  // Paso a paso: primero ver si impacta (o qué salvación hace el objetivo) y luego el daño
+  function panelLanzamiento(s, g, res, nivelEspacio) {
+    const m = c.magia;
+    const expr = g.x ? escalarTirada(g, nivelEspacio) : null;
+    const titulo = `${s.n}${nivelEspacio > s.nv ? ` (nivel ${nivelEspacio})` : ''}`;
+    const tipoDano = (g.d.match(/de (ácido|frío|fuego|fuerza|relámpago|trueno|veneno|radiante|necrótico|psíquico|perforante|cortante|contundente)/i) || [])[1] || (/necrótico/i.test(g.d) ? 'necrótico' : '');
+    let critico = false;
+    const zonaDano = h('div.paso-lanz');
+    const pintarDano = (activo) => {
+      if (!expr) { zonaDano.replaceChildren(); return; }
+      const exprFinal = critico ? expr.replace(/(\d+)d(\d+)/g, (_, n, d) => `${n * 2}d${d}`) : expr;
+      zonaDano.replaceChildren(...[
+        h('h4', {}, res.ataque ? '2. Si impacta: daño' : res.curacion ? 'Curación' : res.salvacion ? '2. Daño' : 'Daño'),
+        res.salvacion && !res.ataque ? h('p.peq', {}, res.mitad ? 'Si falla, recibe todo el daño; si supera la salvación, la mitad.' : 'Si falla la salvación, recibe el daño.') : null,
+        critico ? h('p.critico', {}, '¡Crítico! Se tiran el doble de dados de daño.') : null,
+        h('button.btn-dano.grande' + (activo ? '' : '.apagado'), { onclick: () => mostrarTirada(`${s.n}: ${res.curacion ? 'curación' : 'daño'}${critico ? ' (crítico)' : ''}`, exprFinal) },
+          h('small', {}, res.curacion ? '✚ Tirar curación' : '⚔ Tirar daño'), h('b', {}, exprFinal), tipoDano ? h('small', {}, tipoDano) : null),
+      ].filter(Boolean));
+    };
+    const pasos = [];
+    if (res.ataque) {
+      pasos.push(h('div.paso-lanz', {},
+        h('h4', {}, '1. ¿Impacta?'),
+        h('p.peq', {}, `Tirada de ataque de conjuro ${res.ataque}: d20 ${fmt(m?.ataque ?? 0)} contra la CA del objetivo.`),
+        h('button.btn-ataque.grande', { onclick: () => {
+          const r = tirarD20(`${s.n}: ataque de conjuro`, m?.ataque ?? 0);
+          critico = !!r?.extra?.includes('20 natural');
+          pintarDano(true);
+        } }, h('small', {}, '🎯 Tirar ataque'), h('b', {}, `d20 ${fmt(m?.ataque ?? 0)}`)),
+        estadoDados.fisicos ? h('label.radio', {}, h('input', { type: 'checkbox', onchange: (e) => { critico = e.target.checked; pintarDano(true); } }), ' He sacado un 20 natural (crítico)') : null,
+      ));
+    } else if (res.salvacion) {
+      pasos.push(h('div.paso-lanz', {},
+        h('h4', {}, '1. Salvación del objetivo'),
+        h('p.salv-objetivo', {}, `🛡 Salvación de ${res.salvacion} · CD ${m?.cd ?? '—'}`),
+        h('p.peq', {}, 'La tira el DM (o el objetivo). Tú no tiras para impactar.')));
+    }
+    pintarDano(!res.ataque);
+    modal(`✧ ${titulo}`, h('div.lanzamiento', {}, h('p.peq', {}, `${g.t} · ${g.a} · ${g.conc ? 'Concentración, ' + g.du.toLowerCase() : g.du}`), ...pasos, zonaDano), [{ t: 'Cerrar' }]);
   }
 
   // Ajusta los dados del conjuro al nivel del espacio o del personaje (trucos)

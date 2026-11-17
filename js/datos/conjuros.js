@@ -20,3 +20,12 @@ export const conjuroPorNombre = (n) => porNombre.get(norm(n));
 export const conjuro = (id) => CONJUROS.find((s) => s.id === id);
 export const deClase = (claseId) => CONJUROS.filter((s) => s.cl.includes(LETRA_CLASE[claseId]));
 export const nivelTexto = (nv) => (nv === 0 ? 'Truco' : `Nivel ${nv}`);
+
+// Cómo se resuelve: tirada de ataque, salvación o nada
+const SALV = ['Fuerza', 'Destreza', 'Constitución', 'Inteligencia', 'Sabiduría', 'Carisma'];
+export function resolucion(s) {
+  const ataque = /ataque de conjuro cuerpo a cuerpo/i.test(s.d) ? 'cuerpo a cuerpo' : /ataque de conjuro a distancia|ataque de conjuro/i.test(s.d) ? 'a distancia' : null;
+  const m = s.d.match(new RegExp(`salvaci[oó]n de (${SALV.join('|')})`, 'i'));
+  const curacion = /recupera|curas? |PG temporales/i.test(s.d.split('.')[0]) && !/necr[oó]tico|de fuego|radiante|ácido|psíquico|perforante|contundente|cortante|relámpago|trueno|veneno|frío|fuerza/i.test(s.d.split('.')[0]);
+  return { ataque, salvacion: m ? m[1][0].toUpperCase() + m[1].slice(1).toLowerCase() : null, mitad: /mitad/i.test(s.d), curacion };
+}

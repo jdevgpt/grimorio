@@ -1,6 +1,6 @@
 // Componentes del grimorio: ficha de conjuro, filtros y selector
 import { h, modal } from '../ui.js';
-import { CONJUROS, ESCUELAS, NOMBRE_CLASE, LETRA_CLASE, norm, nivelTexto } from '../datos/conjuros.js';
+import { CONJUROS, ESCUELAS, NOMBRE_CLASE, LETRA_CLASE, norm, nivelTexto, resolucion } from '../datos/conjuros.js';
 
 export function fichaConjuro(s, extra) {
   return h('div.ficha-conj', {},
@@ -11,6 +11,8 @@ export function fichaConjuro(s, extra) {
       h('span', {}, h('b', {}, 'Componentes: '), s.c),
       h('span', {}, h('b', {}, 'Duración: '), s.conc ? `Concentración, ${s.du.toLowerCase()}` : s.du),
     ),
+    (() => { const r = resolucion(s); return r.ataque ? h('p.resol.ataque', {}, `🎯 Requiere tirada de ataque de conjuro ${r.ataque} (d20 + tu bonificador de ataque).`)
+      : r.salvacion ? h('p.resol.salvacion', {}, `🛡 El objetivo hace una salvación de ${r.salvacion} contra tu CD${r.mitad ? '; si la supera, suele recibir la mitad' : ''}.`) : null; })(),
     h('p', {}, s.d),
     s.s && h('p.peq', {}, h('b', {}, s.nv === 0 ? 'Mejora del truco: ' : 'A niveles superiores: '), s.s),
     h('p.peq.clases-conj', {}, [...s.cl].map((l) => NOMBRE_CLASE[l]).join(' · ')),

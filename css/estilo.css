@@ -561,3 +561,16 @@ details.conjuro { display: block; }
 .btn-dano small:last-child { font-family: var(--serif); font-size: .72rem; color: var(--tinta-2); }
 .btn-ataque:active, .btn-dano:active { transform: translateY(1px); }
 .btn-ataque small { color: #f6dcc0; } .btn-dano small { color: var(--tinta-2); }
+
+/* Lanzamiento de conjuros paso a paso */
+#toasts { z-index: 70; }
+.lanzamiento .paso-lanz { padding: .5em 0; border-top: 1px dotted var(--borde); }
+.lanzamiento h4 { margin: .2em 0 .35em; }
+.btn-ataque.grande, .btn-dano.grande { width: 100%; min-height: 62px; margin-top: .3em; }
+.btn-dano.apagado { opacity: .55; }
+.salv-objetivo { font-family: var(--titulo); font-size: 1.05rem; color: var(--lacre-2); margin: .2em 0; }
+.critico { color: var(--lacre); font-weight: 700; }
+.resol { font-size: .9rem; padding: .35em .6em; border-radius: 6px; margin: .3em 0; }
+.resol.ataque { background: #f6dcd0; border-left: 3px solid var(--lacre); }
+.resol.salvacion { background: #f1e6c4; border-left: 3px solid var(--oro); }
+body:has(.modal-fondo) #toasts { top: calc(70px + env(safe-area-inset-top)); bottom: auto; }
