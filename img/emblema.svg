@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="f" cx="50%" cy="40%" r="65%">
+      <stop offset="0" stop-color="#4a2a1c"/>
+      <stop offset="1" stop-color="#1f130c"/>
+    </radialGradient>
+    <linearGradient id="o" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0d27a"/>
+      <stop offset="1" stop-color="#b8862b"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#f)"/>
+  <circle cx="256" cy="256" r="196" fill="none" stroke="url(#o)" stroke-width="10"/>
+  <circle cx="256" cy="256" r="174" fill="none" stroke="#b8862b" stroke-width="3" stroke-dasharray="4 14" stroke-linecap="round"/>
+  <!-- d20 estilizado -->
+  <g fill="none" stroke="url(#o)" stroke-width="9" stroke-linejoin="round">
+    <polygon points="256,104 388,180 388,332 256,408 124,332 124,180"/>
+    <polygon points="256,170 330,300 182,300"/>
+    <path d="M256 104 L256 170 M388 180 L330 300 M124 180 L182 300 M256 408 L182 300 M256 408 L330 300 M124 332 L182 300 M388 332 L330 300 M124 180 L256 170 L388 180"/>
+  </g>
+  <!-- la senda -->
+  <path d="M226 286 C 238 262, 276 262, 256 238 S 266 206, 282 200" fill="none" stroke="#e8a33a" stroke-width="7" stroke-linecap="round" stroke-dasharray="2 13"/>
+  <circle cx="284" cy="198" r="9" fill="#e9483b"/>
+</svg>
