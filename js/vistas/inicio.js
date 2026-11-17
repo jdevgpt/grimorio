@@ -2,7 +2,7 @@ import { h, toast } from '../ui.js';
 import { clase } from '../datos/clases.js';
 import { especie } from '../datos/especies.js';
 import { calcular, validar } from '../motor.js';
-import { misPersonajes, guardar, estado } from '../almacen.js';
+import { misPersonajes, guardar, estado, reglasDe } from '../almacen.js';
 
 export function vistaInicio(cont, irA) {
   const lista = misPersonajes();
@@ -33,8 +33,8 @@ export function vistaInicio(cont, irA) {
 }
 
 export const tarjetaPJ = (irA, mostrarJugador = false) => (pj) => {
-  let c = null; try { c = calcular(pj); } catch { /* hoja incompleta */ }
-  const errores = validar(pj).filter((x) => x.tipo === 'error').length;
+  let c = null; try { c = calcular(pj, reglasDe(pj)); } catch { /* hoja incompleta */ }
+  const errores = validar(pj, reglasDe(pj)).filter((x) => x.tipo === 'error').length;
   const pg = pj.pg?.actual ?? c?.pgMax;
   return h('button.tarjeta-pj', { onclick: () => irA(`#/pj/${pj.id}`) },
     h('div.sello', {}, (pj.nombre || '?')[0].toUpperCase()),

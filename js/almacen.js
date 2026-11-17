@@ -1,6 +1,7 @@
 // Almacenamiento: local (este dispositivo) o nube (Firebase) si está configurado y has entrado.
 import { firebaseConfig } from './firebase-config.js';
 import { guardarLocal, leerLocal } from './ui.js';
+import { REGLAS_DEFECTO, conDefecto } from './datos/opciones.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
 const CLAVE = 'senda.personajes';
@@ -106,7 +107,7 @@ const codigoAleatorio = () => Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRS
 
 export async function crearPartida(nombre) {
   const { db, f } = fb; const u = estado.usuario;
-  const ref = await f.addDoc(f.collection(db, 'partidas'), { nombre, dm: u.uid, dmNombre: u.nombre, codigo: codigoAleatorio(), miembros: [u.uid], creada: Date.now() });
+  const ref = await f.addDoc(f.collection(db, 'partidas'), { nombre, dm: u.uid, dmNombre: u.nombre, codigo: codigoAleatorio(), miembros: [u.uid], creada: Date.now(), reglas: { ...REGLAS_DEFECTO } });
   return ref.id;
 }
 
@@ -131,3 +132,13 @@ export async function expulsar(partida, uid) {
   await fb.f.updateDoc(fb.f.doc(fb.db, 'partidas', partida.id), { miembros: partida.miembros.filter((m) => m !== uid) });
 }
 export const personajesDePartida = (pid) => Object.values(estado.personajes).filter((p) => p.partida === pid);
+
+export async function guardarReglas(pid, reglas) {
+  await fb.f.updateDoc(fb.f.doc(fb.db, 'partidas', pid), { reglas });
+}
+// Reglas de la partida del personaje (null si no está en ninguna)
+export function reglasDe(pj) {
+  if (!pj?.partida) return null;
+  const p = estado.partidas.find((x) => x.id === pj.partida);
+  return p ? conDefecto(p.reglas) : null;
+}

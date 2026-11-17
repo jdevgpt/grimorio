@@ -1,8 +1,11 @@
 import { h, toast, confirmar, pedirTexto } from '../ui.js';
-import { estado, entrar, salir, crearPartida, unirsePartida, borrarPartida, expulsar, personajesDePartida, misPersonajes, asignarPartida, hayLocales, subirLocales } from '../almacen.js';
+import { guardarReglas, estado, entrar, salir, crearPartida, unirsePartida, borrarPartida, expulsar, personajesDePartida, misPersonajes, asignarPartida, hayLocales, subirLocales } from '../almacen.js';
 import { tarjetaPJ } from './inicio.js';
 import { calcular } from '../motor.js';
 import { ESTADOS } from '../datos/reglas.js';
+import { REGLAS_MESA, conDefecto, textoRegla } from '../datos/opciones.js';
+
+let reglasAbiertas = null;
 
 export function vistaPartidas(cont, irA, partidaId) {
   if (!estado.nube) {
@@ -33,7 +36,7 @@ export function vistaPartidas(cont, irA, partidaId) {
     estado.partidas.length ? h('div.lista-partidas', {}, estado.partidas.map((p) => h('button.tarjeta-partida', { onclick: () => irA(`#/partidas/${p.id}`) },
       h('strong', {}, p.nombre), h('span', {}, p.dm === estado.usuario.uid ? '★ Eres el DM' : `DM: ${p.dmNombre}`), h('small', {}, `${p.miembros.length} miembro(s)`)))) : h('p.peq', {}, 'Aún no estás en ninguna partida.'),
     h('div.acciones', {},
-      h('button.btn.rojo', { onclick: async () => { const n = await pedirTexto('Nueva partida', 'Nombre de la campaña'); if (n) { const id = await crearPartida(n); irA(`#/partidas/${id}`); } } }, '✦ Crear partida (DM)'),
+      h('button.btn.rojo', { onclick: async () => { const n = await pedirTexto('Nueva partida', 'Nombre de la campaña'); if (n) { const id = await crearPartida(n); reglasAbiertas = id; toast('Partida creada. Ahora elige las reglas de la mesa.'); irA(`#/partidas/${id}`); } } }, '✦ Crear partida (DM)'),
       h('button.btn', { onclick: async () => { const cod = await pedirTexto('Unirse a una partida', 'Código que te ha dado el DM'); if (!cod) return; try { const p = await unirsePartida(cod); toast(`Te has unido a ${p.nombre}`); irA(`#/partidas/${p.id}`); } catch (e) { toast(e.message); } } }, '⚑ Unirme con código'),
     ),
   ));
@@ -54,7 +57,8 @@ function vistaMesa(cont, irA, pid) {
       h('button.btn.peq', { onclick: () => { navigator.clipboard?.writeText(p.codigo); toast('Código copiado'); } }, 'Copiar')),
     h('h3', {}, soyDM ? 'Personajes de la mesa' : 'Tus personajes en esta partida'),
     pjs.length ? h('div.lista-pj', {}, pjs.map(tarjetaPJ(irA, soyDM))) : h('p.peq', {}, soyDM ? 'Ningún jugador ha unido aún su personaje.' : 'Aún no has unido ningún personaje.'),
-    soyDM && pjs.length ? resumenMesa(pjs) : null,
+    panelReglas(p, soyDM),
+    soyDM && pjs.length ? resumenMesa(pjs, p) : null,
     libres.length ? h('div', {}, h('h3', {}, 'Unir uno de mis personajes'),
       h('div.chips', {}, libres.map((x) => h('button.chip', { onclick: async () => { await asignarPartida(x, p); toast(`${x.nombre} se une a ${p.nombre}`); } }, x.nombre || 'Sin nombre')))) : null,
     soyDM && h('div.acciones', {}, h('button.btn.rojo', { onclick: async () => { if (await confirmar('Borrar partida', 'Las hojas no se borran: siguen siendo de sus jugadores.', 'Borrar')) { await borrarPartida(p.id); irA('#/partidas'); } } }, '🗑 Borrar partida')),
@@ -62,15 +66,41 @@ function vistaMesa(cont, irA, pid) {
   ));
 }
 
-function resumenMesa(pjs) {
+function resumenMesa(pjs, p) {
   return h('div', {}, h('h3', {}, 'Vista rápida del DM'),
     h('table.tabla-mesa', {},
-      h('tr', {}, ['Personaje', 'PG', 'CA', 'Perc.', 'Estados'].map((t) => h('th', {}, t))),
-      pjs.map((pj) => { const c = calcular(pj); return h('tr', {},
+      h('tr', {}, ['Personaje', 'PG', 'CA', 'Perc.', 'Vel.', 'Estados'].map((t) => h('th', {}, t))),
+      pjs.map((pj) => { const c = calcular(pj, conDefecto(p.reglas)); return h('tr', {},
         h('td', {}, pj.nombre),
         h('td', {}, `${pj.pg?.actual ?? c.pgMax}/${c.pgMax}${pj.pg?.temp ? ` +${pj.pg.temp}` : ''}`),
-        h('td', {}, c.ca), h('td', {}, c.percepcionPasiva),
+        h('td', {}, c.ca), h('td', {}, c.percepcionPasiva), h('td', {}, `${String(c.vel).replace('.', ',')} m${c.carga.estado !== 'normal' ? ' ⚖' : ''}`),
         h('td.peq', {}, [...(pj.estados || []).map((id) => ESTADOS.find((e) => e.id === id)?.n), pj.agotamiento ? `Agot. ${pj.agotamiento}` : null].filter(Boolean).join(', ') || '—'));
       }),
     ));
+}
+
+function panelReglas(p, soyDM) {
+  const reglas = conDefecto(p.reglas);
+  const guardarCambio = async (id, v) => {
+    const nuevas = { ...reglas, [id]: v };
+    try { await guardarReglas(p.id, nuevas); toast('Reglas actualizadas para toda la mesa.'); } catch (e) { toast('No se pudo guardar: ' + e.message); }
+  };
+  const control = (r) => {
+    const v = reglas[r.id];
+    if (!soyDM) return h('div.regla', {}, h('b', {}, r.n + ': '), textoRegla(r.id, v));
+    if (r.tipo === 'si_no') return h('label.regla.interruptor', {},
+      h('input', { type: 'checkbox', checked: !!v, onchange: (e) => guardarCambio(r.id, e.target.checked) }),
+      h('span', {}, h('b', {}, r.n), h('small', {}, r.d)));
+    if (r.tipo === 'multi') return h('div.regla', {}, h('b', {}, r.n),
+      h('div.chips', {}, r.opciones.map(([o, t]) => h('button.chip' + (v.includes(o) ? '.sel' : ''), { onclick: () => {
+        const n = v.includes(o) ? v.filter((x) => x !== o) : [...v, o];
+        if (!n.length) return toast('Deja al menos un método.');
+        guardarCambio(r.id, n);
+      } }, t))));
+    return h('div.regla', {}, h('b', {}, r.n),
+      r.opciones.map(([o, t, d]) => h('label.radio', {}, h('input', { type: 'radio', name: 'r_' + r.id, checked: v === o, onchange: () => guardarCambio(r.id, o) }), h('span', {}, t), d ? h('small', {}, ' — ' + d) : '')));
+  };
+  return h('details.panel-reglas', { open: reglasAbiertas === p.id || undefined },
+    h('summary', {}, h('h3', {}, 'Reglas de la mesa'), soyDM ? h('small', {}, 'Solo tú puedes cambiarlas; se aplican a todas las hojas de la partida.') : h('small', {}, 'Las ha elegido tu DM.')),
+    REGLAS_MESA.map(control));
 }

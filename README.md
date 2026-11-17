@@ -8,6 +8,7 @@ Compañero de mesa para la 5.ª edición con las **reglas de 2024**, en español
 - **Dados**: toca cualquier característica, salvación, habilidad o ataque para tirarlo (con ventaja o desventaja).
 - **Partidas compartidas** (con Firebase): cada jugador edita solo su hoja; el DM ve todas en tiempo real y tiene una vista rápida de la mesa.
 - **Grimorio** con los 326 conjuros del SRD 5.2 en español (resumidos): filtros por nivel, clase, escuela, concentración y ritual. Desde la hoja se añaden de tu lista, se lanzan gastando espacio (con daño o curación escalados) y se lleva la concentración.
+- **Reglas de la mesa**: el DM activa o desactiva reglas para su partida (peso y carga, monedas que pesan, contar munición, métodos de características permitidos, PG al subir de nivel, PX o hitos, duración de los descansos, pociones como acción adicional, dotes). Se aplican solas en todas las hojas de la partida.
 - **Compendio** con buscador: reglas básicas, estados, clases, especies, trasfondos, dotes, conjuros, armas y armaduras.
 - Instalable en el móvil y funciona sin conexión.
 

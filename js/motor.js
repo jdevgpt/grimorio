@@ -1,10 +1,11 @@
 // Motor de reglas: cálculos derivados y comprobación de la hoja.
-import { CARACTERISTICAS, HABILIDADES, mod, bonComp, espaciosConjuro, PACTO_ESPACIOS, PACTO_NIVEL, CONJUNTO_ESTANDAR, COSTE_PUNTOS, PUNTOS_TOTALES, PX } from './datos/reglas.js';
+import { CARACTERISTICAS, HABILIDADES, habilidad, mod, bonComp, espaciosConjuro, PACTO_ESPACIOS, PACTO_NIVEL, CONJUNTO_ESTANDAR, COSTE_PUNTOS, PUNTOS_TOTALES, PX } from './datos/reglas.js';
 import { clase, INVOCACIONES_BRUJO } from './datos/clases.js';
 import { especie } from './datos/especies.js';
 import { trasfondo, dote } from './datos/trasfondos.js';
 import { arma, armadura } from './datos/equipo.js';
 import { conjuroPorNombre, LETRA_CLASE } from './datos/conjuros.js';
+import { conDefecto, pesoEstimado } from './datos/opciones.js';
 
 export const CAR_IDS = CARACTERISTICAS.map((c) => c.id);
 const ceros = () => Object.fromEntries(CAR_IDS.map((c) => [c, 0]));
@@ -81,7 +82,8 @@ export function pgMaximo(pj, car) {
   return total;
 }
 
-export function calcular(pj) {
+export function calcular(pj, reglasMesa) {
+  const reglas = conDefecto(reglasMesa);
   const car = caracFinales(pj);
   const m = Object.fromEntries(CAR_IDS.map((c) => [c, mod(car[c])]));
   const nv = Math.max(1, Math.min(20, Number(pj.nivel) || 1));
@@ -134,7 +136,24 @@ export function calcular(pj) {
   if (pj.clase === 'explorador' && nv >= 6 && cuerpo?.tipo !== 'pesada') vel += 3;
   if (pj.clase === 'monje' && nv >= 2 && !cuerpo && !escudo) vel += nv >= 18 ? 9 : nv >= 14 ? 7.5 : nv >= 10 ? 6 : nv >= 6 ? 4.5 : 3;
   if (cuerpo?.fue && car.FUE < cuerpo.fue) vel -= 3;
-  vel -= 1.5 * (pj.agotamiento || 0);
+  // Carga
+  const pesoItem = (e) => {
+    if (e.kg != null && e.kg !== '') return Number(e.kg);
+    if (e.ref?.startsWith('w:')) return arma(e.ref.slice(2))?.kg || 0;
+    if (e.ref?.startsWith('a:')) return armadura(e.ref.slice(2))?.kg || 0;
+    return pesoEstimado(e.n || '');
+  };
+  const monedas = Object.values(pj.monedas || {}).reduce((a, b) => a + Number(b || 0), 0);
+  const peso = (pj.equipo || []).reduce((t, e) => t + pesoItem(e) * Number(e.c ?? 1), 0) + (reglas.monedasPesan ? monedas / 100 : 0);
+  const multCarga = (es?.id === 'goliat' ? 2 : 1);
+  const carga = { activa: reglas.carga !== 'no', modo: reglas.carga, peso, capacidad: car.FUE * 7 * multCarga, estado: 'normal', pesoItem };
+  if (reglas.carga === 'estandar' && peso > carga.capacidad) { carga.estado = 'sobrecargado'; vel = Math.min(vel, 1.5); }
+  if (reglas.carga === 'variante') {
+    carga.umbral1 = car.FUE * 2.5 * multCarga; carga.umbral2 = car.FUE * 5 * multCarga;
+    if (peso > carga.umbral2) { carga.estado = 'muy cargado'; vel -= 6; }
+    else if (peso > carga.umbral1) { carga.estado = 'cargado'; vel -= 3; }
+  }
+  vel = Math.max(0, vel - 1.5 * (pj.agotamiento || 0));
 
   // Iniciativa
   const iniciativa = m.DES + (dotes.some((d) => d.iniciativaPB) ? pb : 0);
@@ -209,7 +228,7 @@ export function calcular(pj) {
   return {
     car, mod: m, nv, pb, cl, es, tf, lin, dotes, salvaciones, habilidades,
     percepcionPasiva: 10 + percepcion.v, ca, caCalculada, caDesc, cuerpo, escudo, vel, iniciativa,
-    pgMax, pgCalc, ataques, magia, rasgos, recursos,
+    pgMax, pgCalc, ataques, magia, rasgos, recursos, carga, reglas,
     dadoGolpe: cl ? `d${cl.dg}` : null,
     vision: lin?.vision || es?.vision || 0,
   };
@@ -246,7 +265,9 @@ export function periciasMaximas(pj) {
   }
 }
 
-export function validar(pj) {
+export function validar(pj, reglasMesa) {
+  const reglas = conDefecto(reglasMesa);
+  const enMesa = !!reglasMesa;
   const out = [];
   const err = (t) => out.push({ tipo: 'error', t });
   const av = (t) => out.push({ tipo: 'aviso', t });
@@ -278,6 +299,9 @@ export function validar(pj) {
     if (base.some((v) => v < 3 || v > 18)) err('Con tiradas (4d6, quitando el menor), cada puntuación base va de 3 a 18.');
   }
 
+  if (enMesa && pj.metodo !== 'manual' && !reglas.metodos.includes(pj.metodo)) err('Tu DM no permite este método de puntuaciones en la partida.');
+  if (enMesa && pj.metodo === 'manual') av('Puntuaciones introducidas a mano: confirma con tu DM qué método usaste.');
+
   // Bonificadores del trasfondo
   const bt = CAR_IDS.filter((c) => Number(pj.bonTrasfondo[c]));
   const fuera = bt.filter((c) => !tf.carac.includes(c));
@@ -297,6 +321,7 @@ export function validar(pj) {
   const estilosEsperados = ({ guerrero: 1, paladin: pj.nivel >= 2 ? 1 : 0, explorador: pj.nivel >= 2 ? 1 : 0 }[pj.clase] || 0) + (pj.clase === 'guerrero' && pj.nivel >= 7 ? 1 : 0);
   if (dotesEst > estilosEsperados) err(`Tienes ${dotesEst} estilos de combate y solo te corresponden ${estilosEsperados}.`);
   else if (dotesEst < estilosEsperados) av(`Te falta elegir ${estilosEsperados - dotesEst} estilo(s) de combate.`);
+  if (enMesa && !reglas.dotesPermitidas && dotesGen) err('En esta partida no se permiten dotes generales: usa las mejoras para subir características.');
   const epicos = (pj.dotes || []).filter((d) => dote(d)?.tipo === 'epico').length;
   if (epicos > (pj.nivel >= 19 ? 1 : 0)) err('Los dones épicos solo se obtienen a nivel 19.');
   const origenExtra = (pj.dotes || []).filter((d) => dote(d)?.tipo === 'origen').length;
@@ -315,7 +340,7 @@ export function validar(pj) {
   // Habilidades
   const comps = Object.entries(pj.habilidades || {}).filter(([, v]) => v >= 1);
   const esperadas = habilidadesEsperadas(pj);
-  for (const h of tf.habilidades) if (!pj.habilidades?.[h]) err(`Falta la competencia de trasfondo: ${h.replace('_', ' ')}.`);
+  for (const h of tf.habilidades) if (!pj.habilidades?.[h]) err(`Falta la competencia de trasfondo: ${habilidad(h).n}.`);
   if (comps.length > esperadas) err(`Tienes ${comps.length} competencias en habilidades; te corresponden ${esperadas}.`);
   else if (comps.length < esperadas) av(`Tienes ${comps.length} competencias en habilidades; puedes tener ${esperadas}.`);
   else ok(`Competencias en habilidades correctas (${esperadas}).`);
@@ -338,7 +363,8 @@ export function validar(pj) {
   }
 
   // Armadura
-  const c = calcular(pj);
+  const c = calcular(pj, reglasMesa);
+  if (c.carga.estado !== 'normal') av(`Vas ${c.carga.estado}: llevas ${c.carga.peso.toFixed(1).replace('.', ',')} kg.`);
   if (c.cuerpo && !competenciaArmadura(pj, c.cuerpo.tipo)) av(`No eres competente con armadura ${c.cuerpo.tipo}: desventaja en pruebas de FUE y DES y no puedes lanzar conjuros.`);
   if (c.escudo && !competenciaArmadura(pj, 'escudo')) av('No eres competente con escudos.');
   if (c.cuerpo?.fue && car.FUE < c.cuerpo.fue) av(`${c.cuerpo.n} requiere Fuerza ${c.cuerpo.fue}: pierdes 3 m de velocidad.`);
@@ -361,7 +387,7 @@ export function validar(pj) {
   }
 
   // Nivel y PX
-  if (pj.px && Number(pj.px) > 0) {
+  if (reglas.experiencia !== 'hitos' && pj.px && Number(pj.px) > 0) {
     const nvPx = PX.filter((x) => Number(pj.px) >= x).length;
     if (nvPx !== pj.nivel) av(`Con ${pj.px} PX corresponde nivel ${nvPx} (tienes ${pj.nivel}). Ignóralo si jugáis por hitos.`);
   }

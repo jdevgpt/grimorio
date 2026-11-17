@@ -6,7 +6,7 @@ import { ESPECIES, especie } from '../datos/especies.js';
 import { TRASFONDOS, DOTES, dote } from '../datos/trasfondos.js';
 import { ARMAS, ARMADURAS, PROPIEDADES, MAESTRIAS, arma, armadura } from '../datos/equipo.js';
 import { calcular, validar, tirar, CAR_IDS, periciasMaximas } from '../motor.js';
-import { guardar, borrar, esMio, estado, asignarPartida } from '../almacen.js';
+import { guardar, borrar, esMio, estado, asignarPartida, reglasDe } from '../almacen.js';
 import { informeValidacion, metros } from './comun.js';
 import { conjuroPorNombre, LETRA_CLASE } from '../datos/conjuros.js';
 import { fichaConjuro, etiquetasConj, elegirConjuros } from './grimorio.js';
@@ -21,7 +21,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
   let c;
 
   function dibujar() {
-    c = calcular(pj);
+    c = calcular(pj, reglasDe(pj));
     const y = scrollY;
     cont.replaceChildren(
       h('div.hoja' + (ro ? '.solo-lectura' : ''), {},
@@ -113,7 +113,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
         h('span.marca', {}, c.salvaciones[k.id].comp ? '●' : '○'), k.id, h('b', {}, fmt(c.salvaciones[k.id].v))))),
       h('h3', {}, 'Ataques'),
       h('div.ataques', {}, c.ataques.map((a) => h('div.ataque', {},
-        h('button.tirable', { onclick: () => tirarD20(`${a.n}: ataque`, a.bon) }, h('b', {}, a.n), h('span.bon', {}, fmt(a.bon))),
+        h('button.tirable', { onclick: () => { tirarD20(`${a.n}: ataque`, a.bon); gastarMunicion(a); } }, h('b', {}, a.n), h('span.bon', {}, fmt(a.bon))),
         h('button.tirable', { onclick: () => mostrarTirada(`${a.n}: daño`, a.dano.replace(/^(\d+)$/, '$1')) }, h('span', {}, `${a.dano} ${a.td.toLowerCase()}`)),
         a.vers && h('button.tirable', { onclick: () => mostrarTirada(`${a.n}: daño (2 manos)`, a.vers) }, h('span.peq', {}, `2 manos ${a.vers}`)),
         a.arma && h('small.props', {}, [a.arma.rango ? `${a.arma.rango} m` : '', ...a.arma.prop.map((p) => PROPIEDADES[p].split(':')[0]), `Maestría: ${MAESTRIAS[a.arma.m].split(':')[0]}`].filter(Boolean).join(' · '), !a.comp ? ' · sin competencia' : ''),
@@ -131,6 +131,16 @@ export function vistaHoja(cont, pjOriginal, irA) {
       pj.estados.length ? h('ul.lista-estados', {}, pj.estados.map((id) => { const e = ESTADOS.find((x) => x.id === id); return h('li', {}, h('b', {}, e.n + ': '), e.d); })) : null,
       h('div.agotamiento', {}, h('b', {}, 'Agotamiento: '), marcas(pj.agotamiento || 0, 6, (n) => { pj.agotamiento = n; }), pj.agotamiento ? h('p.peq', {}, `−${pj.agotamiento * 2} a las pruebas de d20, −${metros(pj.agotamiento * 1.5)} de velocidad. ${AGOTAMIENTO}`) : null),
     ];
+  }
+
+  function gastarMunicion(a) {
+    if (ro || !c.reglas.municion || !a.arma?.prop.includes('municion')) return;
+    const tipo = /arco/i.test(a.arma.n) ? /flecha/i : /ballesta/i.test(a.arma.n) ? /virote/i : /cerbatana/i.test(a.arma.n) ? /aguja|dardo de cerbatana/i : /bala|munici[oó]n/i;
+    const it = pj.equipo.find((e) => tipo.test(e.n) && Number(e.c) > 0);
+    if (!it) { toast(`⚠ No te queda munición para ${a.arma.n}. Añádela en Equipo.`, 4000); return; }
+    it.c = Number(it.c) - 1; guardar(pj);
+    setTimeout(() => toast(`${it.n}: te quedan ${it.c}. Tras el combate recuperas la mitad.`), 300);
+    dibujar();
   }
 
   function modoDados() {
@@ -172,7 +182,8 @@ export function vistaHoja(cont, pjOriginal, irA) {
   }
 
   async function descansoCorto() {
-    const ok = await confirmar('Descanso corto', 'Recuperas los recursos de descanso corto (y los espacios de pacto). Puedes gastar dados de golpe desde Combate.', 'Descansar');
+    const dur = { estandar: '1 hora', heroico: '5 minutos', realista: '8 horas' }[c.reglas.descansos];
+    const ok = await confirmar(`Descanso corto (${dur})`, 'Recuperas los recursos de descanso corto (y los espacios de pacto). Puedes gastar dados de golpe desde Combate.', 'Descansar');
     if (!ok) return;
     for (const r of c.recursos) if (r.rec === 'corto') pj.recursos[r.id] = 0;
     pj.pactoGastados = 0;
@@ -180,7 +191,8 @@ export function vistaHoja(cont, pjOriginal, irA) {
   }
 
   async function descansoLargo() {
-    const ok = await confirmar('Descanso largo', 'Recuperas todos los PG, los dados de golpe, los espacios de conjuro y los recursos. Pierdes 1 nivel de agotamiento.', 'Descansar');
+    const dur = { estandar: '8 horas', heroico: '1 hora', realista: '7 días' }[c.reglas.descansos];
+    const ok = await confirmar(`Descanso largo (${dur})`, 'Recuperas todos los PG, los dados de golpe, los espacios de conjuro y los recursos. Pierdes 1 nivel de agotamiento.', 'Descansar');
     if (!ok) return;
     pj.pg.actual = c.pgMax; pj.pg.temp = 0; pj.dadosGolpeGastados = 0;
     pj.recursos = {}; pj.espaciosGastados = {}; pj.pactoGastados = 0;
@@ -194,14 +206,15 @@ export function vistaHoja(cont, pjOriginal, irA) {
     if (!cl) return;
     const nuevos = [...cl.rasgos, ...cl.subclase.rasgos].filter((r) => r.nv === nv);
     const media = cl.dg / 2 + 1;
-    let valor = media;
-    const sel = h('div', {},
+    const modoPG = c.reglas.pgNivel;
+    let valor = modoPG === 'tirada' ? tirar(`1d${cl.dg}`).total : media;
+    const sel = modoPG !== 'eleccion' ? h('p', {}, modoPG === 'media' ? `Tu DM usa la media: ${media} + Con (${fmt(c.mod.CON)}).` : `Tu DM pide tirar: sacas ${valor} en 1d${cl.dg}, + Con (${fmt(c.mod.CON)}).`) : h('div', {},
       h('p', {}, `PG que ganas: media ${media} + Con (${fmt(c.mod.CON)}) o tira 1d${cl.dg}.`),
       h('div.segmentado', {},
         h('button.sel', { onclick: (e) => { valor = media; e.target.parentNode.querySelectorAll('button').forEach((b) => b.classList.remove('sel')); e.target.classList.add('sel'); res.textContent = `+${Math.max(1, media + c.mod.CON)} PG`; } }, 'Media'),
         h('button', { onclick: (e) => { valor = tirar(`1d${cl.dg}`).total; e.target.parentNode.querySelectorAll('button').forEach((b) => b.classList.remove('sel')); e.target.classList.add('sel'); res.textContent = `Sacas ${valor}: +${Math.max(1, valor + c.mod.CON)} PG`; } }, `🎲 Tirar d${cl.dg}`)),
     );
-    const res = h('p.grande', {}, `+${Math.max(1, media + c.mod.CON)} PG`);
+    const res = h('p.grande', {}, `+${Math.max(1, valor + c.mod.CON)} PG`);
     const r = await modal(`Subir a nivel ${nv}`, h('div', {}, sel, res,
       h('h4', {}, 'Nuevos rasgos'), nuevos.length ? nuevos.map((x) => h('p.peq', {}, h('b', {}, x.n + '. '), x.d)) : h('p.peq', {}, 'Solo mejoras numéricas (conjuros, recursos…).'),
       nuevos.some((x) => x.mejora) && h('p.ayuda', {}, 'Reparte la mejora de característica (o elige dote) en "Editar y revisar".'),
@@ -211,7 +224,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     const antes = c.pgMax;
     pj.pg.tiradas[nv - 2] = valor === media ? null : valor;
     pj.nivel = nv;
-    const despues = calcular(pj).pgMax;
+    const despues = calcular(pj, reglasDe(pj)).pgMax;
     pj.pg.actual = (pj.pg.actual ?? antes) + (despues - antes);
     guardar(pj, true); dibujar(); toast(`¡Nivel ${nv}!`);
   }
@@ -339,11 +352,14 @@ export function vistaHoja(cont, pjOriginal, irA) {
 
   // ---------- Equipo ----------
   function equipo() {
-    const total = (pj.equipo || []).reduce((s, e) => {
-      const r = e.ref ? (e.ref.startsWith('w:') ? arma(e.ref.slice(2)) : armadura(e.ref.slice(2))) : null;
-      return s + (r?.kg || 0) * (e.c || 1);
-    }, 0);
+    const k = c.carga;
+    const kg = (v) => `${Number(v).toFixed(1).replace('.', ',')} kg`;
     return [
+      k.activa ? h('div.carga' + (k.estado !== 'normal' ? '.mal' : ''), {},
+        h('div.carga-fila', {}, h('b', {}, 'Carga: '), `${kg(k.peso)} / ${kg(k.modo === 'variante' ? k.umbral1 : k.capacidad)}`, h('span.carga-estado', {}, k.estado === 'normal' ? 'Sin penalización' : k.estado)),
+        h('div.pg-barra', {}, h('div', { style: { width: Math.min(100, (k.peso / (k.modo === 'variante' ? k.umbral2 : k.capacidad)) * 100) + '%' }, class: k.estado === 'normal' ? '' : k.estado === 'cargado' ? 'medio' : 'critico' })),
+        h('p.peq', {}, k.modo === 'variante' ? `Cargado a partir de ${kg(k.umbral1)} (−3 m) · Muy cargado a partir de ${kg(k.umbral2)} (−6 m y desventaja en FUE, DES y CON)` : `Capacidad: ${kg(k.capacidad)}. Si la superas, tu velocidad baja a 1,5 m.`),
+      ) : null,
       h('h3', {}, 'Monedas'),
       h('div.monedas', {}, [['pc', 'Cobre'], ['pp', 'Plata'], ['pe', 'Electro'], ['po', 'Oro'], ['ppt', 'Platino']].map(([k, n]) => h('label', {}, h('small', {}, n),
         h('input.num', { type: 'number', value: pj.monedas[k] || 0, disabled: ro, onchange: cambio((e) => { pj.monedas[k] = Number(e.target.value) || 0; }) })))),
@@ -351,10 +367,11 @@ export function vistaHoja(cont, pjOriginal, irA) {
       h('div.inventario', {}, (pj.equipo || []).map((e, i) => h('div.item', {},
         e.ref ? h('input', { type: 'checkbox', checked: !!e.equipado, title: 'Equipado', onchange: cambio((ev) => { equipar(i, ev.target.checked); }) }) : h('span.marca', {}, '·'),
         h('span.item-n', {}, e.n, e.ref && h('small', {}, ' ', detalleRef(e.ref))),
-        h('input.num.cant', { type: 'number', min: 0, value: e.c ?? 1, disabled: ro, onchange: cambio((ev) => { pj.equipo[i].c = Number(ev.target.value); }) }),
+        h('input.num.cant', { type: 'number', min: 0, value: e.c ?? 1, disabled: ro, title: 'Cantidad', onchange: cambio((ev) => { pj.equipo[i].c = Number(ev.target.value); }) }),
+        k.activa && h('input.num.kg', { type: 'number', min: 0, step: 0.1, value: e.kg ?? k.pesoItem(e), disabled: ro, title: 'Peso por unidad (kg)', onchange: cambio((ev) => { pj.equipo[i].kg = ev.target.value === '' ? null : Number(ev.target.value); }) }),
         !ro && h('button.x', { onclick: cambio(() => { pj.equipo.splice(i, 1); }) }, '×'),
       ))),
-      h('p.peq', {}, `Peso de armas y armaduras: ${total.toFixed(1).replace('.', ',')} kg · Capacidad: ${(c.car.FUE * 7).toFixed(0)} kg`),
+      k.activa ? h('p.peq', {}, 'Columnas: cantidad · peso por unidad (kg). Ajusta el peso si no coincide.') : h('p.peq', {}, `Peso total aproximado: ${kg(k.peso)}`),
       !ro && formItem(),
     ];
   }
@@ -405,8 +422,8 @@ export function vistaHoja(cont, pjOriginal, irA) {
   function notas() {
     const ta = (k, et, filas = 4) => h('label.campo', {}, h('span', {}, et), h('textarea', { rows: filas, disabled: ro, value: pj[k] || '', onchange: cambio((e) => { pj[k] = e.target.value; }) }));
     return [ta('apariencia', 'Apariencia y personalidad'), ta('historia', 'Historia'), ta('notas', 'Notas de campaña', 8),
-      h('label.campo', {}, h('span', {}, 'Experiencia (PX)'), h('input.num', { type: 'number', value: pj.px || 0, disabled: ro, onchange: cambio((e) => { pj.px = Number(e.target.value) || 0; }) })),
-      pj.px ? h('p.peq', {}, `Siguiente nivel: ${PX[pj.nivel] ?? '—'} PX`) : null,
+      c.reglas.experiencia === 'hitos' ? h('p.peq', {}, 'Progresión por hitos: tu DM decide cuándo subes de nivel.') : h('label.campo', {}, h('span', {}, 'Experiencia (PX)'), h('input.num', { type: 'number', value: pj.px || 0, disabled: ro, onchange: cambio((e) => { pj.px = Number(e.target.value) || 0; }) })),
+      pj.px && c.reglas.experiencia !== 'hitos' ? h('p.peq', {}, `Siguiente nivel: ${PX[pj.nivel] ?? '—'} PX`) : null,
     ];
   }
 
@@ -418,7 +435,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
     const maxPer = periciasMaximas(pj);
     return [
       h('h3', {}, 'Comprobación de reglas'),
-      informeValidacion(validar(pj)),
+      informeValidacion(validar(pj, reglasDe(pj))),
       h('h3', {}, 'Identidad'),
       h('div.form-grid', {},
         campo('Nombre', h('input', { value: pj.nombre, onchange: cambio((e) => { pj.nombre = e.target.value; }) })),
