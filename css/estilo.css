@@ -442,3 +442,14 @@ details.conjuro .ficha-conj { margin: .4em 0 .2em 1.6em; }
 .act-banner.ver { display: flex; }
 .act-banner span { flex: 1; }
 .act-banner button { flex: none; padding: .5em 1em; border-radius: 8px; border: 1px solid #4d0c0c; background: linear-gradient(180deg, #a52626, var(--lacre-2)); color: #fbeedd; font: inherit; font-weight: 700; cursor: pointer; }
+
+/* Paso de conjuros del creador */
+.paso-conj { margin-bottom: 1.2em; }
+.contador-conj { font-family: var(--serif); font-size: .9rem; color: var(--tinta-3); font-weight: 400; }
+.contador-conj.completo { color: var(--verde); }
+.sel-lista-paso { max-height: 340px; overflow: auto; border: 1px solid var(--borde); border-radius: 8px; background: rgba(255, 252, 242, .5); }
+.sel-conj-paso { border-bottom: 1px dotted var(--borde); }
+.sel-conj-paso > summary { display: flex; gap: .4em; align-items: center; padding: .45em .5em; cursor: pointer; list-style: none; }
+.sel-conj-paso > summary::-webkit-details-marker { display: none; }
+.sel-conj-paso.sel { background: #f8e7cf; }
+.sel-conj-paso .ficha-conj { padding: 0 .8em .6em 2.2em; }

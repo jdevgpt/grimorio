@@ -8,8 +8,10 @@ import { arma, armadura } from '../datos/equipo.js';
 import { nuevoPersonaje, calcular, validar, caracFinales, contarMejoras, habilidadesEsperadas, periciasMaximas, CAR_IDS, tirar } from '../motor.js';
 import { guardar } from '../almacen.js';
 import { informeValidacion } from './comun.js';
+import { CONJUROS, LETRA_CLASE, nivelTexto, norm } from '../datos/conjuros.js';
+import { etiquetasConj, fichaConjuro } from './grimorio.js';
 
-const PASOS = ['Inicio', 'Clase', 'Trasfondo', 'Especie', 'Características', 'Habilidades', 'Equipo', 'Nivel', 'Resumen'];
+const PASOS = ['Inicio', 'Clase', 'Trasfondo', 'Especie', 'Características', 'Habilidades', 'Equipo', 'Nivel', 'Conjuros', 'Resumen'];
 
 let pj, paso, opcEquipo;
 
@@ -18,12 +20,12 @@ export function vistaCreador(cont, irA) {
   const dibujar = () => {
     cont.replaceChildren(
       h('div.creador', {},
-        h('ol.pasos', {}, PASOS.map((p, i) => h('li' + (i === paso ? '.activo' : i < paso ? '.hecho' : ''), { onclick: () => { if (i <= paso || puedeAvanzar(i)) { paso = i; dibujar(); } } }, h('span', {}, i + 1), h('em', {}, p)))),
+        h('ol.pasos', {}, PASOS.map((p, i) => !activo(i) ? null : h('li' + (i === paso ? '.activo' : i < paso ? '.hecho' : ''), { onclick: () => { if (i <= paso || puedeAvanzar(i)) { paso = i; dibujar(); } } }, h('span', {}, PASOS.slice(0, i + 1).filter((_, k) => activo(k)).length), h('em', {}, p)))),
         h('section.paso-cuerpo', {}, PINTAR[paso](dibujar)),
         h('div.nav-pasos', {},
-          paso > 0 ? h('button.btn', { onclick: () => { paso--; if (paso === 7 && pj.nivel === 1) paso--; dibujar(); scrollTo(0, 0); } }, '← Atrás') : h('button.btn', { onclick: () => { reiniciar(); dibujar(); } }, 'Empezar de nuevo'),
+          paso > 0 ? h('button.btn', { onclick: () => { do paso--; while (paso > 0 && !activo(paso)); dibujar(); scrollTo(0, 0); } }, '← Atrás') : h('button.btn', { onclick: () => { reiniciar(); dibujar(); } }, 'Empezar de nuevo'),
           paso < PASOS.length - 1
-            ? h('button.btn.rojo', { onclick: () => { const e = falta(paso); if (e) return toast(e); paso++; if (paso === 7 && pj.nivel === 1) paso++; dibujar(); scrollTo(0, 0); } }, 'Siguiente →')
+            ? h('button.btn.rojo', { onclick: () => { const e = falta(paso); if (e) return toast(e); do paso++; while (paso < PASOS.length - 1 && !activo(paso)); dibujar(); scrollTo(0, 0); } }, 'Siguiente →')
             : h('button.btn.rojo', { onclick: async () => { finalizar(); await guardar(pj, true); const id = pj.id; pj = null; irA(`#/pj/${id}`); } }, '✦ Crear personaje'),
         ),
       ),
@@ -33,6 +35,13 @@ export function vistaCreador(cont, irA) {
 }
 
 function reiniciar() { pj = nuevoPersonaje(); paso = 0; opcEquipo = { clase: 'A', trasfondo: 'A' }; }
+// Pasos que solo aparecen si hacen falta
+function activo(i) {
+  if (i === 7) return pj.nivel > 1;
+  if (i === 8) return tieneMagia();
+  return true;
+}
+const tieneMagia = () => !!(clase(pj.clase)?.conj || [trasfondo(pj.trasfondo)?.dote, ...pj.dotes].some((d) => dote(d)?.magia));
 const puedeAvanzar = (i) => { for (let k = paso; k < i; k++) if (falta(k)) return false; return true; };
 
 function falta(i) {
@@ -68,7 +77,7 @@ const PINTAR = [
   // 1 Clase
   (re) => [
     h('h2', {}, 'Elige tu clase'),
-    h('div.rejilla-tarjetas', {}, CLASES.map((c) => h('button.tarjeta' + (pj.clase === c.id ? '.sel' : ''), { onclick: () => { if (pj.clase !== c.id) { pj.clase = c.id; pj.eleccion1 = null; pj.dotes = pj.dotes.filter((d) => dote(d)?.tipo !== 'estilo'); } re(); } },
+    h('div.rejilla-tarjetas', {}, CLASES.map((c) => h('button.tarjeta' + (pj.clase === c.id ? '.sel' : ''), { onclick: () => { if (pj.clase !== c.id) { pj.clase = c.id; pj.eleccion1 = null; pj.conjuros = pj.conjuros.filter((x) => x.mi); pj.dotes = pj.dotes.filter((d) => dote(d)?.tipo !== 'estilo'); } re(); } },
       h('strong', {}, c.n), h('span.dg', {}, `d${c.dg} · ${c.prim.join('/')}`), h('span', {}, c.resumen)))),
     pj.clase && detalleClase(clase(pj.clase), re),
   ],
@@ -105,7 +114,9 @@ const PINTAR = [
   (re) => pasoEquipo(re),
   // 7 Nivel
   (re) => pasoNivel(re),
-  // 8 Resumen
+  // 8 Conjuros
+  (re) => pasoConjuros(re),
+  // 9 Resumen
   (re) => pasoResumen(re),
 ];
 
@@ -143,6 +154,7 @@ function eleccionEstilo(re) {
 function cambiarTrasfondo(id) {
   const ant = trasfondo(pj.trasfondo);
   if (ant) ant.habilidades.forEach((x) => { delete pj.habilidades[x]; });
+  if (pj.trasfondo !== id) pj.conjuros = pj.conjuros.filter((x) => !x.mi);
   pj.trasfondo = id;
   pj.bonTrasfondo = Object.fromEntries(CAR_IDS.map((c) => [c, 0]));
   const t = trasfondo(id);
@@ -332,7 +344,7 @@ function finalizar() {
   if (pj.clase === 'druida') nuevos.push({ n: 'Hablar con los animales', nv: 1, prep: true, extra: true, siempre: true, fuente: 'Druídico' });
   if (pj.clase === 'explorador') nuevos.push({ n: 'Marca del cazador', nv: 1, prep: true, extra: true, siempre: true, fuente: 'Enemigo predilecto' });
   if (pj.clase === 'paladin' && pj.nivel >= 2) nuevos.push({ n: 'Castigo divino', nv: 1, prep: true, extra: true, siempre: true, fuente: 'Castigo del paladín' });
-  pj.conjuros = [...nuevos, ...pj.conjuros.filter((s) => !s.extra)];
+  pj.conjuros = [...nuevos, ...pj.conjuros.filter((s) => !s.extra || s.mi)];
   if (!pj.herramientas.length) pj.herramientas = [trasfondo(pj.trasfondo).herramienta, clase(pj.clase).herr].filter(Boolean);
   const c = calcular(pj);
   pj.pg.actual = c.pgMax;
@@ -359,4 +371,68 @@ function pasoResumen() {
     h('h3', {}, 'Comprobación de reglas'),
     informeValidacion(validar(copia)),
   ];
+}
+
+// ---------- Paso de conjuros ----------
+const busquedas = {};
+function pasoConjuros(re) {
+  const c = calcular(pj);
+  const cl = clase(pj.clase);
+  const secciones = [];
+  const deClase = (s, letra) => s.cl.includes(letra);
+  if (cl?.conj && c.magia) {
+    const letra = LETRA_CLASE[pj.clase];
+    const maxNv = c.magia.pacto ? c.magia.pacto.nivel : c.magia.espacios.length;
+    if (c.magia.trucos) secciones.push(selector({ clave: 'trucos', titulo: `Trucos de ${cl.n.toLowerCase()}`, max: c.magia.trucos,
+      lista: CONJUROS.filter((s) => s.nv === 0 && deClase(s, letra)), es: (x) => !x.extra && Number(x.nv) === 0, nuevo: (s) => ({ n: s.n, nv: 0, prep: true }) }, re));
+    secciones.push(selector({ clave: 'prep', titulo: pj.clase === 'mago' ? 'Conjuros preparados (de tu libro de conjuros)' : 'Conjuros preparados',
+      ayuda: `Hasta nivel ${maxNv}. Podrás cambiarlos más adelante${pj.clase === 'mago' ? '; tu libro empieza con 6 conjuros de nivel 1 (anótalos en Notas si quieres llevar la lista completa)' : ' tras un descanso largo'}.`,
+      max: c.magia.preparados, lista: CONJUROS.filter((s) => s.nv >= 1 && s.nv <= maxNv && deClase(s, letra)),
+      es: (x) => !x.extra && Number(x.nv) > 0, nuevo: (s) => ({ n: s.n, nv: s.nv, prep: true }) }, re));
+  }
+  const dotesMagia = [trasfondo(pj.trasfondo)?.dote, ...pj.dotes].map(dote).filter((d) => d?.magia);
+  for (const d of dotesMagia) {
+    const letra = LETRA_CLASE[d.magia];
+    const fuente = d.n;
+    secciones.push(selector({ clave: 'mi0_' + d.id, titulo: `${d.n}: 2 trucos`, max: 2, lista: CONJUROS.filter((s) => s.nv === 0 && deClase(s, letra)),
+      es: (x) => x.mi && x.fuente === fuente && Number(x.nv) === 0, nuevo: (s) => ({ n: s.n, nv: 0, prep: true, extra: true, mi: true, fuente }) }, re));
+    secciones.push(selector({ clave: 'mi1_' + d.id, titulo: `${d.n}: 1 conjuro de nivel 1`, ayuda: 'Siempre preparado; lo lanzas una vez al día sin gastar espacio.', max: 1, lista: CONJUROS.filter((s) => s.nv === 1 && deClase(s, letra)),
+      es: (x) => x.mi && x.fuente === fuente && Number(x.nv) === 1, nuevo: (s) => ({ n: s.n, nv: 1, prep: true, siempre: true, extra: true, mi: true, fuente }) }, re));
+  }
+  const es = especie(pj.especie); const lin = es?.opciones?.lista.find((o) => o.id === pj.opcion);
+  return [
+    h('h2', {}, 'Trucos y conjuros'),
+    h('p.ayuda', {}, 'Elige aquí tus conjuros iniciales. Después podrás cambiarlos o añadir más en la pestaña ✧ Conjuros de la hoja.'),
+    lin?.conjuros ? h('p.peq', {}, `Por tu linaje (${lin.n}) ya tienes: ${lin.conjuros.filter(([n]) => n <= pj.nivel).map(([, x]) => x).join(', ')}. Se añaden solos.`) : null,
+    ...secciones,
+  ];
+}
+
+function selector({ clave, titulo, ayuda, max, lista, es, nuevo }, re) {
+  const elegidos = pj.conjuros.filter(es);
+  const q = norm(busquedas[clave] || '');
+  const nombres = new Set(elegidos.map((x) => x.n));
+  const visibles = lista.filter((s) => !q || norm(s.n).includes(q) || norm(s.d).includes(q));
+  const lleno = elegidos.length >= max;
+  const resultados = h('div.sel-lista-paso');
+  const pintarResultados = (filtro) => resultados.replaceChildren(...lista.filter((s) => !filtro || norm(s.n).includes(filtro) || norm(s.d).includes(filtro)).map((s) => {
+    const sel = nombres.has(s.n);
+    return h('details.sel-conj-paso' + (sel ? '.sel' : ''), {},
+      h('summary', {},
+        h('input', { type: 'checkbox', checked: sel, disabled: !sel && lleno, onclick: (e) => e.stopPropagation(), onchange: (e) => {
+          if (e.target.checked) { if (pj.conjuros.filter(es).length >= max) { e.target.checked = false; return toast(`Máximo ${max}.`); } pj.conjuros.push(nuevo(s)); }
+          else { const i = pj.conjuros.findIndex((x) => es(x) && x.n === s.n); if (i >= 0) pj.conjuros.splice(i, 1); }
+          re();
+        } }),
+        h('span', {}, h('b', {}, s.n), ' ', etiquetasConj(s), h('small', {}, ` ${nivelTexto(s.nv)} · ${s.escuela}`))),
+      fichaConjuro(s));
+  }));
+  pintarResultados(q);
+  return h('div.paso-conj', {},
+    h('h3', {}, titulo, h('span.contador-conj' + (elegidos.length === max ? '.completo' : ''), {}, ` ${elegidos.length}/${max}`)),
+    ayuda && h('p.peq', {}, ayuda),
+    elegidos.length ? h('div.chips', {}, elegidos.map((x) => h('span.chip.sel', {}, x.n))) : null,
+    h('input.buscador', { type: 'search', placeholder: `Buscar entre ${lista.length}…`, value: busquedas[clave] || '', oninput: (e) => { busquedas[clave] = e.target.value; pintarResultados(norm(e.target.value)); } }),
+    resultados,
+  );
 }
