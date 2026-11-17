@@ -39,6 +39,11 @@ service cloud.firestore {
         allow read: if esMiembro(pid);
         allow write: if gestionaIni(pid);
       }
+      // Enemigos y aliados guardados para reutilizar
+      match /plantillas/{tid} {
+        allow read: if esMiembro(pid);
+        allow write: if gestionaIni(pid);
+      }
       // Participantes: gestores, o cada jugador su propia entrada si el DM lo permite.
       match /iniciativa/{iid} {
         allow read: if esMiembro(pid);

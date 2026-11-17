@@ -5,6 +5,7 @@ import { fmt } from '../datos/reglas.js';
 import { conDefecto } from '../datos/opciones.js';
 import { estado, escucharSub, escucharDoc, crearEnSub, escribirEnSub, borrarEnSub, actualizarPartida, nombreDe, soyDMDe, gestionaIniciativa, personajesDePartida, misPersonajes } from '../almacen.js';
 
+const datosPJ = (pj, p) => { const c = calcular(pj, conDefecto(p.reglas)); return { n: pj.nombre || 'Sin nombre', uid: pj.owner || null, pjId: pj.id, bon: c.iniciativa, tipo: 'pj', ca: c.ca, pg: pj.pg?.actual ?? c.pgMax, pgMax: c.pgMax }; };
 const ordenar = (ps) => [...ps].sort((a, b) => (b.ini ?? -99) - (a.ini ?? -99) || (b.bon || 0) - (a.bon || 0) || a.n.localeCompare(b.n, 'es'));
 
 export function vistaIniciativa(cont, p) {
@@ -13,6 +14,8 @@ export function vistaIniciativa(cont, p) {
   const gestor = gestionaIniciativa(p);
   let participantes = []; let combate = { activo: false, ronda: 0, turno: null };
   let ultimoTurno = null;
+  let plantillas = [];
+  let cargado = false;
 
   const zona = h('div.ini-zona');
   const pintar = () => {
@@ -20,7 +23,7 @@ export function vistaIniciativa(cont, p) {
     const pendientes = participantes.filter((x) => x.ini == null);
     zona.replaceChildren(...[
       h('div.ini-cab', {},
-        combate.activo ? h('div.ronda', {}, h('small', {}, 'Ronda'), h('b', {}, combate.ronda)) : h('p.ayuda', {}, participantes.length ? 'Combate preparado. Pulsa «Empezar» cuando estéis listos.' : 'No hay ningún combate en marcha.'),
+        combate.activo ? h('div.ronda', {}, h('small', {}, 'Ronda'), h('b', {}, combate.ronda)) : h('p.ayuda', {}, participantes.length ? 'Combate preparado. Pulsa «Empezar» cuando estéis listos.' : 'Combate sin empezar. Los personajes de la mesa aparecen solos; añade enemigos y pulsa «Empezar».'),
         gestor && h('div.acciones', {},
           !combate.activo && participantes.length ? h('button.btn.rojo', { onclick: empezar }, '⚔ Empezar combate') : null,
           combate.activo && h('button.btn', { onclick: () => avanzar(-1) }, '◀ Anterior'),
@@ -95,8 +98,13 @@ export function vistaIniciativa(cont, p) {
   }
 
   async function terminar() {
-    if (!(await confirmar('Terminar combate', 'Se borran todos los participantes y la ronda vuelve a 0, listo para un combate nuevo.', 'Terminar'))) return;
-    for (const x of participantes) await borrarEnSub(p.id, 'iniciativa', x.id);
+    if (!(await confirmar('Terminar combate', 'Se quitan los enemigos y aliados, los personajes se quedan con la iniciativa en blanco y la ronda vuelve a 0, listo para el siguiente combate.', 'Terminar'))) return;
+    for (const x of participantes) {
+      if (x.tipo === 'pj') {
+        const pj = personajesDePartida(p.id).find((y) => y.id === x.pjId);
+        await escribirEnSub(p.id, 'iniciativa', x.id, { ...(pj ? datosPJ(pj, p) : {}), ini: null });
+      } else await borrarEnSub(p.id, 'iniciativa', x.id);
+    }
     await escribirEnSub(p.id, 'combate', 'estado', { activo: false, ronda: 0, turno: null }, false);
     toast('Combate terminado.');
   }
@@ -104,15 +112,17 @@ export function vistaIniciativa(cont, p) {
   // Un jugador apunta a su propio personaje
   function miPersonajeUI() {
     if (!p.iniPropia && !gestor) return null;
-    const mios = misPersonajes().filter((x) => x.partida === p.id && !participantes.some((y) => y.pjId === x.id));
+    const mios = misPersonajes().filter((x) => x.partida === p.id && !(participantes.find((y) => y.pjId === x.id)?.ini != null));
     if (!mios.length) return null;
     return h('div.ini-mios', {}, h('h4', {}, 'Tu personaje'), mios.map((pj) => {
-      const c = calcular(pj, conDefecto(p.reglas));
-      return h('button.btn', { onclick: async () => {
-        const v = tiradaIni(c.iniciativa);
-        await crearEnSub(p.id, 'iniciativa', { n: pj.nombre, uid, pjId: pj.id, bon: c.iniciativa, ini: v, tipo: 'pj', ca: c.ca, pg: pj.pg?.actual ?? c.pgMax, pgMax: c.pgMax, creada: Date.now() });
+      const d = datosPJ(pj, p);
+      return h('button.btn.rojo', { onclick: async () => {
+        const v = tiradaIni(d.bon);
+        const ya = participantes.find((y) => y.pjId === pj.id);
+        if (ya) await escribirEnSub(p.id, 'iniciativa', ya.id, { ...d, ini: v });
+        else await crearEnSub(p.id, 'iniciativa', { ...d, uid, ini: v, creada: Date.now() });
         toast(`${pj.nombre}: iniciativa ${v}`);
-      } }, `🎲 Tirar iniciativa de ${pj.nombre} (${fmt(c.iniciativa)})`);
+      } }, `🎲 Tirar iniciativa de ${pj.nombre} (${fmt(d.bon)})`);
     }));
   }
 
@@ -125,20 +135,19 @@ export function vistaIniciativa(cont, p) {
     const ca = h('input.num', { type: 'number', placeholder: 'CA', title: 'Clase de armadura' });
     const tipo = h('select', {}, h('option', { value: 'enemigo' }, 'Enemigo'), h('option', { value: 'aliado' }, 'Aliado / PNJ'));
     const oculto = h('label.radio', {}, h('input', { type: 'checkbox' }), ' Oculto');
-    const pjsMesa = dm ? personajesDePartida(p.id).filter((x) => !participantes.some((y) => y.pjId === x.id)) : [];
-    return h('div.ini-form', {},
+    const notas = h('input', { placeholder: 'Notas (ataques, resistencias…)' });
+    const guardarPl = h('label.radio', {}, h('input', { type: 'checkbox', checked: true }), ' Guardar para otros combates');
+        return h('div.ini-form', {},
       h('h4', {}, 'Añadir al combate'),
-      pjsMesa.length ? h('button.btn', { onclick: async () => {
-        for (const pj of pjsMesa) {
-          const c = calcular(pj, conDefecto(p.reglas));
-          await crearEnSub(p.id, 'iniciativa', { n: pj.nombre, uid: pj.owner, pjId: pj.id, bon: c.iniciativa, ini: null, tipo: 'pj', ca: c.ca, pg: pj.pg?.actual ?? c.pgMax, pgMax: c.pgMax, creada: Date.now() });
-        }
-        toast(`${pjsMesa.length} personaje(s) añadidos. Pueden tirar ellos o pulsa «Tirar las que faltan».`);
-      } }, `⚑ Añadir los personajes de la mesa (${pjsMesa.length})`) : null,
+      plantillasUI(),
+      h('h4', {}, 'Nuevo enemigo o aliado'),
       h('div.ini-form-grid', {}, n, tipo, h('label', {}, h('small', {}, 'Bon.'), bon), h('label', {}, h('small', {}, 'Ini.'), ini), h('label', {}, h('small', {}, 'Cant.'), cant), h('label', {}, h('small', {}, 'PG'), pg), h('label', {}, h('small', {}, 'CA'), ca)),
-      oculto,
+      notas, oculto, guardarPl,
       h('button.btn.rojo', { onclick: async () => {
         const nombre = n.value.trim(); if (!nombre) return toast('Pon un nombre.');
+        if (guardarPl.querySelector('input').checked && !plantillas.some((x) => x.n.toLowerCase() === nombre.toLowerCase())) {
+          await crearEnSub(p.id, 'plantillas', { n: nombre, tipo: tipo.value, bon: Number(bon.value) || 0, pg: pg.value ? Number(pg.value) : null, ca: ca.value ? Number(ca.value) : null, notas: notas.value.trim(), oculto: oculto.querySelector('input').checked, creada: Date.now() });
+        }
         const k = Math.max(1, Math.min(20, Number(cant.value) || 1));
         for (let i = 1; i <= k; i++) {
           const b = Number(bon.value) || 0;
@@ -146,12 +155,45 @@ export function vistaIniciativa(cont, p) {
             n: k > 1 ? `${nombre} ${i}` : nombre, tipo: tipo.value, bon: b,
             ini: ini.value !== '' ? Number(ini.value) : tiradaIni(b),
             pg: pg.value ? Number(pg.value) : null, pgMax: pg.value ? Number(pg.value) : null, ca: ca.value ? Number(ca.value) : null,
-            oculto: oculto.querySelector('input').checked, creada: Date.now(),
+            oculto: oculto.querySelector('input').checked, notas: notas.value.trim(), creada: Date.now(),
           });
         }
-        n.value = ''; ini.value = '';
+        n.value = ''; ini.value = ''; notas.value = '';
       } }, '+ Añadir'),
     );
+  }
+
+  function plantillasUI() {
+    if (!plantillas.length) return h('p.peq', {}, 'Los enemigos y aliados que crees se guardan aquí para reutilizarlos en otros combates.');
+    return h('div.plantillas', {}, h('h4', {}, 'Guardados de la partida'),
+      [...plantillas].sort((a, b) => a.n.localeCompare(b.n, 'es')).map((t) => {
+        const cant = h('input.num', { type: 'number', value: 1, min: 1, max: 20, title: 'Cantidad' });
+        return h('div.plantilla' + (t.tipo === 'enemigo' ? '.enemigo' : '.aliado'), {},
+          h('span.item-n', {}, h('b', {}, t.n), h('small', {}, ' ' + [t.tipo === 'enemigo' ? 'Enemigo' : 'Aliado', `Inic. ${fmt(t.bon || 0)}`, t.pg ? `${t.pg} PG` : null, t.ca ? `CA ${t.ca}` : null].filter(Boolean).join(' · ')), t.notas ? h('small.notas', {}, t.notas) : null),
+          cant,
+          h('button.btn.peq.rojo', { onclick: async () => {
+            const k = Math.max(1, Math.min(20, Number(cant.value) || 1));
+            const yaHay = participantes.filter((x) => x.plantilla === t.id).length;
+            for (let i = 1; i <= k; i++) {
+              await crearEnSub(p.id, 'iniciativa', { n: k > 1 || yaHay ? `${t.n} ${yaHay + i}` : t.n, tipo: t.tipo, bon: t.bon || 0, ini: tiradaIni(t.bon), pg: t.pg ?? null, pgMax: t.pg ?? null, ca: t.ca ?? null, notas: t.notas || '', oculto: !!t.oculto, plantilla: t.id, creada: Date.now() });
+            }
+            toast(`${k} × ${t.n} al combate`);
+          } }, '+ Al combate'),
+          h('button.x', { title: 'Borrar de guardados', onclick: async () => { if (await confirmar('Borrar', `¿Quitar «${t.n}» de los guardados?`, 'Borrar')) await borrarEnSub(p.id, 'plantillas', t.id); } }, '×'),
+        );
+      }));
+  }
+
+  // El DM añade automáticamente a los personajes de la mesa que falten
+  let anadiendo = false;
+  async function sincronizarPJ() {
+    if (!dm || anadiendo) return;
+    const faltan = personajesDePartida(p.id).filter((pj) => !participantes.some((y) => y.pjId === pj.id));
+    if (!faltan.length) return;
+    anadiendo = true;
+    try {
+      for (const pj of faltan) await crearEnSub(p.id, 'iniciativa', { ...datosPJ(pj, p), ini: null, creada: Date.now() });
+    } finally { anadiendo = false; }
   }
 
   function permisosUI() {
@@ -169,6 +211,7 @@ export function vistaIniciativa(cont, p) {
   const f1 = escucharSub(p.id, 'iniciativa', (docs, error) => {
     if (error) { zona.replaceChildren(h('p.ayuda.mal', {}, 'No se puede leer la iniciativa. ¿Has publicado las reglas nuevas de Firestore?')); return; }
     participantes = docs || [];
+    cargado = true; sincronizarPJ();
     if (!zona.contains(document.activeElement) || document.activeElement.tagName !== 'INPUT') pintar();
   });
   const f2 = escucharDoc(p.id, 'combate', 'estado', (d) => {
@@ -178,5 +221,6 @@ export function vistaIniciativa(cont, p) {
     ultimoTurno = combate.turno;
     pintar();
   });
-  alSalir(() => { f1(); f2(); });
+  const f3 = escucharSub(p.id, 'plantillas', (docs) => { plantillas = docs || []; if (!zona.contains(document.activeElement) || document.activeElement.tagName !== 'INPUT') pintar(); });
+  alSalir(() => { f1(); f2(); f3(); });
 }

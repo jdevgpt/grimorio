@@ -1,5 +1,5 @@
 // Service worker: la app funciona sin conexión.
-const VERSION = 'senda-v7';
+const VERSION = 'senda-v9';
 const ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'img/emblema.svg', 'img/icono-192.png', 'img/icono-512.png',
@@ -10,10 +10,12 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  // cache: 'reload' para no coger copias antiguas de la caché de GitHub
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
+self.addEventListener('message', (e) => { if (e.data === 'version') e.source && e.source.postMessage({ version: VERSION }); });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('senda-') && k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);

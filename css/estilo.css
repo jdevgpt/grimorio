@@ -427,3 +427,18 @@ details.conjuro .ficha-conj { margin: .4em 0 .2em 1.6em; }
 .form-cont .chips { margin: .2em 0; }
 .form-cont small { display: block; color: var(--tinta-3); }
 .rasgo-form { display: flex; flex-direction: column; gap: .3em; padding: .5em 0; border-bottom: 1px dotted var(--borde); }
+
+/* Plantillas de combate */
+.plantillas { margin: .4em 0 1em; }
+.plantilla { display: flex; align-items: center; gap: .4em; padding: .45em .5em; border-bottom: 1px dotted var(--borde); border-left: 4px solid #4b8044; }
+.plantilla.enemigo { border-left-color: var(--lacre); }
+.plantilla .item-n { display: flex; flex-direction: column; }
+.plantilla input.num { width: 3.2em; }
+.filtros .chip[aria-pressed="true"] { background: var(--lacre); border-color: var(--lacre-2); color: #fbeedd; }
+
+/* Aviso de actualización */
+.act-banner { position: fixed; left: 10px; right: 10px; top: calc(66px + env(safe-area-inset-top)); z-index: 40; display: none; align-items: center; gap: 10px;
+  max-width: 880px; margin: 0 auto; background: var(--cuero); color: var(--perg); border: 1px solid var(--oro); border-radius: 12px; padding: 10px 10px 10px 14px; box-shadow: 0 6px 18px rgba(0, 0, 0, .35); font-family: var(--titulo); font-size: .88rem; }
+.act-banner.ver { display: flex; }
+.act-banner span { flex: 1; }
+.act-banner button { flex: none; padding: .5em 1em; border-radius: 8px; border: 1px solid #4d0c0c; background: linear-gradient(180deg, #a52626, var(--lacre-2)); color: #fbeedd; font: inherit; font-weight: 700; cursor: pointer; }

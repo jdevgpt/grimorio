@@ -35,7 +35,7 @@ export function filtrarConjuros(f) {
 export function barraFiltros(f, alCambiar, { sinClase = false } = {}) {
   const sel = (k, opciones, placeholder) => h('select', { onchange: (e) => { f[k] = e.target.value; alCambiar(); } },
     h('option', { value: '' }, placeholder), opciones.map(([v, t]) => h('option', { value: v, selected: String(f[k] ?? '') === String(v) }, t)));
-  const chk = (k, t) => h('label.chip' + (f[k] ? '.sel' : ''), {}, h('input', { type: 'checkbox', checked: !!f[k], hidden: true, onchange: (e) => { f[k] = e.target.checked; alCambiar(); } }), t);
+  const chk = (k, t) => h('button.chip' + (f[k] ? '.sel' : ''), { type: 'button', 'aria-pressed': f[k] ? 'true' : 'false', onclick: (e) => { f[k] = !f[k]; e.currentTarget.classList.toggle('sel', f[k]); e.currentTarget.setAttribute('aria-pressed', f[k]); e.currentTarget.firstChild.textContent = f[k] ? '✓ ' : ''; alCambiar(); } }, h('span', {}, f[k] ? '✓ ' : ''), t);
   return h('div.filtros', {},
     h('input.buscador', { type: 'search', placeholder: 'Buscar conjuro…', value: f.q || '', oninput: (e) => { f.q = e.target.value; alCambiar(true); } }),
     h('div.filtros-fila', {},
