@@ -10,6 +10,8 @@ import { guardar } from '../almacen.js';
 import { informeValidacion } from './comun.js';
 import { CONJUROS, LETRA_CLASE, nivelTexto, norm } from '../datos/conjuros.js';
 import { etiquetasConj, fichaConjuro } from './grimorio.js';
+import { botonNombres } from './nombres.js';
+import { ESPECIE_A_ESTILO } from '../datos/nombres.js';
 
 const PASOS = ['Inicio', 'Clase', 'Trasfondo', 'Especie', 'Características', 'Habilidades', 'Equipo', 'Nivel', 'Conjuros', 'Resumen'];
 
@@ -67,7 +69,11 @@ const PINTAR = [
       h('button.tarjeta' + (pj.metodo !== 'manual' ? '.sel' : ''), { onclick: () => { if (pj.metodo === 'manual') pj.metodo = 'estandar'; re(); } }, h('strong', {}, '✦ Crear desde cero'), h('span', {}, 'Te guío por las reglas y hago los cálculos.')),
       h('button.tarjeta' + (pj.metodo === 'manual' ? '.sel' : ''), { onclick: () => { pj.metodo = 'manual'; re(); } }, h('strong', {}, '✎ Introducir hoja existente'), h('span', {}, 'Copia tu hoja de papel y la app la revisa.')),
     ),
-    campo('Nombre del personaje', h('input', { value: pj.nombre, placeholder: 'p. ej. Aldric el Errante', oninput: (e) => { pj.nombre = e.target.value; } })),
+    (() => {
+      const inp = h('input', { value: pj.nombre, placeholder: 'p. ej. Aldric el Errante', oninput: (e) => { pj.nombre = e.target.value; } });
+      return campo('Nombre del personaje', h('div.con-dado', {}, inp, botonNombres(inp, { estilo: () => ESPECIE_A_ESTILO[pj.especie] })));
+    })(),
+    h('p.peq', {}, 'Pulsa 🎲 para ideas. En el último paso puedes generar otro según la especie que elijas.'),
     campo('Jugador', h('input', { value: pj.jugador, oninput: (e) => { pj.jugador = e.target.value; } })),
     h('div.fila2', {},
       campo('Nivel', h('select', { onchange: (e) => { pj.nivel = Number(e.target.value); } }, Array.from({ length: 20 }, (_, i) => h('option', { value: i + 1, selected: pj.nivel === i + 1 }, i + 1)))),
@@ -351,11 +357,13 @@ function finalizar() {
   pj.px = pj.px || 0;
 }
 
-function pasoResumen() {
+function pasoResumen(re) {
   const copia = JSON.parse(JSON.stringify(pj));
   const anterior = pj; pj = copia; finalizar(); pj = anterior;
   const c = calcular(copia);
+  const inpNombre = h('input', { value: pj.nombre, placeholder: 'Nombre del personaje', oninput: (e) => { pj.nombre = e.target.value; } });
   return [
+    h('div.con-dado.nombre-final', {}, inpNombre, botonNombres(inpNombre, { estilo: () => ESPECIE_A_ESTILO[pj.especie], alElegir: () => setTimeout(re, 50) })),
     h('h2', {}, copia.nombre || 'Tu personaje'),
     h('p.subt', {}, `${c.es.n}${c.lin ? ` (${c.lin.n})` : ''} · ${c.cl.n} ${copia.nivel}${copia.nivel >= 3 ? ` · ${c.cl.subclase.n}` : ''} · ${c.tf.n}`),
     h('div.stats-mini', {},

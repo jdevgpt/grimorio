@@ -495,3 +495,53 @@ details.conjuro { display: block; }
   .plantilla input.num { margin-left: auto; }
   .segmentado.mini button { padding: .4em .7em; font-size: .75rem; }
 }
+
+/* Generador de nombres */
+.con-dado { display: flex; gap: .4em; align-items: stretch; }
+.con-dado input { flex: 1; min-width: 0; }
+.dado-nombre { padding: 0 .7em; font-size: 1.15rem; }
+.nombres-lista { display: flex; flex-wrap: wrap; gap: .4em; margin: .5em 0 .8em; }
+.chip.nombre { font-size: .95rem; padding: .45em .8em; background: #fffaf0; }
+.nombre-final { margin-top: .6em; }
+.ini-form-grid > .con-dado { flex: 1 1 100%; grid-column: 1 / 3; }
+
+/* Almanaque de temporada */
+.cab { overflow: hidden; }
+.particulas { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.cab > a, .cab > .cab-info { position: relative; z-index: 1; }
+.particulas span { position: absolute; top: -1.5em; opacity: .0; animation-name: caer; animation-timing-function: linear; animation-iteration-count: infinite; color: var(--oro-2); text-shadow: 0 0 4px rgba(0, 0, 0, .4); }
+@keyframes caer {
+  0% { transform: translate(0, 0) rotate(0); opacity: 0; }
+  10% { opacity: .85; }
+  50% { transform: translate(14px, 40px) rotate(160deg); }
+  90% { opacity: .7; }
+  100% { transform: translate(-10px, 85px) rotate(340deg); opacity: 0; }
+}
+.est-invierno .particulas span { color: #e9f2ff; }
+.est-primavera .particulas span { color: #f4b6c8; }
+.est-verano .particulas span { color: #ffe08a; animation-name: flotar; }
+.est-otono .particulas span { color: #e08a3a; }
+@keyframes flotar {
+  0% { transform: translate(0, 70px); opacity: 0; }
+  30% { opacity: .9; }
+  100% { transform: translate(18px, 0); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .particulas { display: none; } }
+
+.almanaque {
+  display: flex; align-items: baseline; gap: .45em; flex-wrap: wrap; justify-content: center; width: 100%; border: none; cursor: pointer;
+  padding: .32em 1em .38em; font-family: var(--titulo); font-size: .78rem; color: var(--tinta);
+  background: linear-gradient(90deg, transparent, rgba(184, 134, 43, .22) 15%, rgba(184, 134, 43, .22) 85%, transparent);
+  border-bottom: 1px solid rgba(184, 134, 43, .45);
+}
+.alm-icono { font-size: 1rem; }
+.alm-texto b { color: var(--lacre-2); }
+.alm-apodo { font-family: var(--serif); font-style: italic; color: var(--tinta-2); font-size: .78rem; }
+.est-invierno .almanaque { background: linear-gradient(90deg, transparent, rgba(150, 180, 210, .3) 15%, rgba(150, 180, 210, .3) 85%, transparent); }
+.est-primavera .almanaque { background: linear-gradient(90deg, transparent, rgba(150, 190, 120, .28) 15%, rgba(150, 190, 120, .28) 85%, transparent); }
+.est-verano .almanaque { background: linear-gradient(90deg, transparent, rgba(230, 190, 80, .3) 15%, rgba(230, 190, 80, .3) 85%, transparent); }
+.est-otono .almanaque { background: linear-gradient(90deg, transparent, rgba(200, 110, 40, .25) 15%, rgba(200, 110, 40, .25) 85%, transparent); }
+.meses-harptos li.actual { color: var(--lacre); font-weight: 700; }
+.alm-detalle p { margin: .45em 0; }
+/* La cinta ocupa sitio: las barras fijas de pestañas bajan un poco */
+.pestanas, .secciones { top: 61px; }

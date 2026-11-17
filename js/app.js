@@ -7,6 +7,7 @@ import { vistaPartidas } from './vistas/partidas.js';
 import { vistaCompendio } from './vistas/compendio.js';
 import { vistaDados } from './vistas/dados.js';
 import { vistaContenido } from './vistas/contenido.js';
+import { iniciarAlmanaque } from './estacion.js';
 
 const vista = document.getElementById('vista');
 const irA = (hash) => { if (location.hash === hash) ruta(); else location.hash = hash; };
@@ -67,6 +68,7 @@ function mesaCambiada() {
   const cambio = f !== firmaMesa; firmaMesa = f; return cambio;
 }
 
+iniciarAlmanaque();
 ruta();
 iniciar();
 

@@ -16,6 +16,8 @@ Compañero de mesa para la 5.ª edición con las **reglas de 2024**, en español
 - **Unidades**: todas las distancias, pesos y kilómetros muestran también su equivalente de la edición anterior (pies, libras y millas).
 - **Reglas de la mesa**: el DM elige dados virtuales o físicos (con físicos la app no tira: indica qué tirar y pide el resultado cuando lo necesita), y activa o desactiva reglas para su partida (peso y carga, monedas que pesan, contar munición, métodos de características permitidos, PG al subir de nivel, PX o hitos, duración de los descansos, pociones como acción adicional, dotes). Se aplican solas en todas las hojas de la partida.
 - **Compendio** con buscador: reglas básicas, estados, clases, especies, trasfondos, dotes, conjuros, armas y armaduras.
+- **Generador de nombres** por pueblo (humano, elfo, enano, mediano, gnomo, orco, tiflin, dracónido, goliat) y para criaturas de combate (goblins, kóbolds, bandidos, no muertos, demonios, cultistas…), en el creador y en la iniciativa.
+- **Almanaque**: decoración según la estación y la fecha de hoy en el calendario de Harptos (conversión como en [faerun-date](https://github.com/Cantilux/faerun-date)), con la próxima festividad.
 - Instalable en el móvil y funciona sin conexión. Busca versiones nuevas al abrirla y cada 30 minutos, y avisa con un botón «Actualizar».
 
 App: https://jdevgpt.github.io/grimorio/

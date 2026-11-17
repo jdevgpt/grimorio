@@ -3,6 +3,7 @@ import { h, toast, confirmar, alSalir, estadoDados, pedirTexto, obtenerTirada } 
 import { tirar, calcular } from '../motor.js';
 import { fmt } from '../datos/reglas.js';
 import { conDefecto } from '../datos/opciones.js';
+import { botonNombres } from './nombres.js';
 import { estado, escucharSub, escucharDoc, crearEnSub, escribirEnSub, borrarEnSub, actualizarPartida, nombreDe, soyDMDe, gestionaIniciativa, personajesDePartida, misPersonajes } from '../almacen.js';
 
 const datosPJ = (pj, p) => { const c = calcular(pj, conDefecto(p.reglas)); return { n: pj.nombre || 'Sin nombre', uid: pj.owner || null, pjId: pj.id, bon: c.iniciativa, tipo: 'pj', ca: c.ca, pg: pj.pg?.actual ?? c.pgMax, pgMax: c.pgMax }; };
@@ -144,7 +145,7 @@ export function vistaIniciativa(cont, p) {
       h('h4', {}, 'Añadir al combate'),
       plantillasUI(),
       h('h4', {}, 'Nuevo enemigo o aliado'),
-      h('div.ini-form-grid', {}, n, tipo, h('label', {}, h('small', {}, 'Bon.'), bon), h('label', {}, h('small', {}, 'Ini.'), ini), h('label', {}, h('small', {}, 'Cant.'), cant), h('label', {}, h('small', {}, 'PG'), pg), h('label', {}, h('small', {}, 'CA'), ca)),
+      h('div.ini-form-grid', {}, h('div.con-dado', {}, n, botonNombres(n, { estilo: () => (tipo.value === 'enemigo' ? 'goblin' : 'humano'), criaturas: true })), tipo, h('label', {}, h('small', {}, 'Bon.'), bon), h('label', {}, h('small', {}, 'Ini.'), ini), h('label', {}, h('small', {}, 'Cant.'), cant), h('label', {}, h('small', {}, 'PG'), pg), h('label', {}, h('small', {}, 'CA'), ca)),
       notas, oculto, guardarPl,
       h('button.btn.rojo', { onclick: async () => {
         const nombre = n.value.trim(); if (!nombre) return toast('Pon un nombre.');
