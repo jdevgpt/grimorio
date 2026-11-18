@@ -625,3 +625,10 @@ a, button, summary, label { -webkit-tap-highlight-color: transparent; }
 .nav-inf a.sel::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--oro-2); box-shadow: 0 0 8px rgba(227, 191, 98, .6); }
 .nav-inf a:active span { transform: scale(.92); }
 .nav-inf a span { transition: transform .1s; }
+
+/* Android estira la página (y la barra inferior) al llegar a un borde haciendo scroll: lo desactivamos */
+html, body { overscroll-behavior-y: none; overscroll-behavior-x: none; }
+.nav-inf, .cab { transform: translateZ(0); backface-visibility: hidden; will-change: transform; }
+.nav-inf a:active span { transform: none; }
+.modal { overscroll-behavior: contain; }
+.selector-lista, .sel-lista-paso, .lista-preparar { overscroll-behavior: contain; }
