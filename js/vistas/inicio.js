@@ -27,19 +27,25 @@ export function vistaInicio(cont, irA) {
         h('h2', {}, 'Tus personajes'),
         h('p.ayuda', {}, estado.usuario ? `Guardados en tu cuenta (${estado.usuario.nombre}).` : 'Guardados en este dispositivo. Entra en Partidas para sincronizarlos y compartirlos con tu DM.'),
       ),
-      h('div.acciones', {},
+      h('div.acciones-principales', {},
         h('button.btn.rojo', { onclick: () => irA('#/crear') }, '✦ Nuevo personaje'),
-        h('button.btn', { onclick: () => importar.click() }, '⬆ Importar JSON'), importar,
-        lista.length ? h('button.btn', { onclick: () => {
-          const fecha = new Date().toISOString().slice(0, 10);
-          descargar(`Senda del Errante - personajes ${fecha}.json`, JSON.stringify({ app: 'La Senda del Errante', fecha, personajes: lista }, null, 2));
-          toast(`Copia de seguridad de ${lista.length} personaje(s) descargada.`);
-        } }, '⬇ Exportar todos') : null,
-        h('button.btn', { onclick: () => irA('#/contenido') }, '📖 Contenido de mi libro'),
+        h('button.btn', { onclick: () => irA('#/contenido') }, '📖 Mi libro'),
       ),
       lista.length ? h('div.lista-pj', {}, lista.map(tarjetaPJ(irA))) : h('div.vacio', {},
         h('p', {}, 'Aún no hay ningún errante en el camino.'),
         h('p.peq', {}, 'Crea uno nuevo o introduce la hoja que ya tienes en papel.')),
+      h('div.copia-seguridad', {},
+        h('h3', {}, 'Copia de seguridad'),
+        h('div.acciones-principales', {},
+          lista.length ? h('button.btn', { onclick: () => {
+            const fecha = new Date().toISOString().slice(0, 10);
+            descargar(`Senda del Errante - personajes ${fecha}.json`, JSON.stringify({ app: 'La Senda del Errante', fecha, personajes: lista }, null, 2));
+            toast(`Copia de seguridad de ${lista.length} personaje(s) descargada.`);
+          } }, '⬇ Exportar todos') : null,
+          h('button.btn', { onclick: () => importar.click() }, '⬆ Importar'), importar,
+        ),
+        h('p.peq', {}, 'Guarda un archivo con tus personajes para recuperarlos en otro móvil o si borras los datos del navegador.'),
+      ),
     ),
   );
 }

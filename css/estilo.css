@@ -609,3 +609,10 @@ body:has(.modal-fondo) #toasts { top: calc(70px + env(safe-area-inset-top)); bot
 .home p, .home li { overflow-wrap: anywhere; }
 .firma { text-align: center; font-family: var(--titulo); color: var(--oro); margin: 1.5em 0 .5em; }
 .nav-inf a { font-size: .64rem; }
+
+/* Botones de la lista de personajes */
+.acciones-principales { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .5em; margin: .8em 0; }
+.acciones-principales .btn { min-height: 46px; width: 100%; }
+.acciones-principales .btn.rojo { grid-column: span 1; }
+.copia-seguridad { margin-top: 1.6em; padding-top: .2em; }
+.copia-seguridad .acciones-principales { margin: .5em 0 .3em; }

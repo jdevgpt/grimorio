@@ -124,7 +124,7 @@ export function vistaHome(cont, irA) {
 
     guia('📖', 'Añadir contenido de tu libro',
       p('El reglamento gratuito (SRD 5.2) no incluye todo el Manual del Jugador de 2024: trae 9 especies, 4 trasfondos y parte de las dotes.'),
-      p('En ', b('Personajes → «📖 Contenido de mi libro»'), ' (o en la pestaña ', b('Libro'), ' de una partida, si eres DM) puedes añadir trasfondos, especies y dotes de tu libro. Aparecen en el creador marcados con 📖 y el comprobador de reglas los tiene en cuenta. Si los añade el DM en la partida, los tiene toda la mesa.'),
+      p('En ', b('Personajes → «📖 Mi libro»'), ' (o en la pestaña ', b('Libro'), ' de una partida, si eres DM) puedes añadir trasfondos, especies y dotes de tu libro. Aparecen en el creador marcados con 📖 y el comprobador de reglas los tiene en cuenta. Si los añade el DM en la partida, los tiene toda la mesa.'),
     ),
 
     guia('❦', 'Compendio, dados y más',
@@ -139,7 +139,7 @@ export function vistaHome(cont, irA) {
 
     guia('💾', 'Copias de seguridad y privacidad',
       lista(
-        ['Sin cuenta, tus personajes se guardan ', b('solo en este dispositivo'), '. Haz copia con «⬇ Exportar todos» en Personajes (o «⬇ Exportar» en la cabecera de cada hoja) y recupérala con «⬆ Importar JSON».'],
+        ['Sin cuenta, tus personajes se guardan ', b('solo en este dispositivo'), '. Haz copia con «⬇ Exportar todos» en Personajes (o «⬇ Exportar» en la cabecera de cada hoja) y recupérala con «⬆ Importar».'],
         ['Con cuenta de Google se guardan en la nube (Firebase) y los ves en cualquier móvil. Solo tú y el DM de tu partida podéis verlos.'],
         'La app no tiene anuncios ni rastreadores, y no vende ni comparte tus datos.',
       ),
