@@ -1,5 +1,5 @@
 // Service worker: la app funciona sin conexión.
-const VERSION = 'senda-v25';
+const VERSION = 'senda-v26';
 const ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'img/emblema.svg', 'img/icono-192.png', 'img/icono-512.png',

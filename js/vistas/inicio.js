@@ -1,4 +1,9 @@
-import { h, toast, descargar } from '../ui.js';
+import { h, toast, descargar, modal, nombreArchivo } from '../ui.js';
+
+function exportarUno(pj) {
+  descargar(nombreArchivo(pj.nombre), JSON.stringify(pj, null, 2));
+  toast(`Descargado: ${nombreArchivo(pj.nombre)}`);
+}
 import { clase } from '../datos/clases.js';
 import { especie } from '../datos/especies.js';
 import { calcular, validar } from '../motor.js';
@@ -37,10 +42,17 @@ export function vistaInicio(cont, irA) {
       h('div.copia-seguridad', {},
         h('h3', {}, 'Copia de seguridad'),
         h('div.acciones-principales', {},
-          lista.length ? h('button.btn', { onclick: () => {
+          lista.length === 1 ? h('button.btn', { onclick: () => exportarUno(lista[0]) }, `⬇ Exportar ${lista[0].nombre || 'personaje'}`) : null,
+          lista.length > 1 ? h('button.btn', { onclick: async () => {
+            const elegido = await modal('Exportar un personaje', h('p.peq', {}, 'Elige cuál quieres descargar.'),
+              [...lista.map((x) => ({ t: `⬇ ${x.nombre || 'Sin nombre'}`, v: x.id })), { t: 'Cancelar', v: null }], { vertical: true });
+            const pj = lista.find((x) => x.id === elegido);
+            if (pj) exportarUno(pj);
+          } }, '⬇ Exportar uno') : null,
+          lista.length > 1 ? h('button.btn', { onclick: () => {
             const fecha = new Date().toISOString().slice(0, 10);
             descargar(`LSDE_Todos_${fecha}.json`, JSON.stringify({ app: 'La Senda del Errante', fecha, personajes: lista }, null, 2));
-            toast(`Copia de seguridad de ${lista.length} personaje(s) descargada.`);
+            toast(`Copia de seguridad de ${lista.length} personajes descargada.`);
           } }, '⬇ Exportar todos') : null,
           h('button.btn', { onclick: () => importar.click() }, '⬆ Importar'), importar,
         ),
