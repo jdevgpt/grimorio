@@ -616,3 +616,12 @@ body:has(.modal-fondo) #toasts { top: calc(70px + env(safe-area-inset-top)); bot
 .acciones-principales .btn.rojo { grid-column: span 1; }
 .copia-seguridad { margin-top: 1.6em; padding-top: .2em; }
 .copia-seguridad .acciones-principales { margin: .5em 0 .3em; }
+
+/* Sin recuadro gris al tocar (el resaltado del navegador parecía «expandir» el botón) */
+a, button, summary, label { -webkit-tap-highlight-color: transparent; }
+.nav-inf a { position: relative; outline: none; transition: color .15s; }
+.nav-inf a:focus:not(:focus-visible) { outline: none; background: none; }
+.nav-inf a:focus-visible { outline: 2px solid var(--oro); outline-offset: -4px; border-radius: 8px; }
+.nav-inf a.sel::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--oro-2); box-shadow: 0 0 8px rgba(227, 191, 98, .6); }
+.nav-inf a:active span { transform: scale(.92); }
+.nav-inf a span { transition: transform .1s; }
