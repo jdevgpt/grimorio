@@ -18,7 +18,7 @@ export function vistaContenido(cont, irA, partida) {
   let datos = leer();
 
   const pintar = () => cont.replaceChildren(h('section.contenido', {},
-    esMesa ? h('button.btn.peq', { onclick: () => irA(`#/partidas/${partida.id}`) }, '← ' + partida.nombre) : h('button.btn.peq', { onclick: () => irA('#/') }, '← Personajes'),
+    esMesa ? h('button.btn.peq', { onclick: () => irA(`#/partidas/${partida.id}`) }, '← ' + partida.nombre) : h('button.btn.peq', { onclick: () => irA('#/personajes') }, '← Personajes'),
     h('h2', {}, esMesa ? 'Contenido de la mesa' : 'Contenido de mi libro'),
     h('p.ayuda', {}, 'El SRD gratuito solo incluye parte del Manual del Jugador de 2024 (9 especies, 4 trasfondos y algunas dotes). Aquí podéis añadir lo que tengáis en vuestro libro y aparecerá en el creador de personajes y en el comprobador de reglas.'),
     esMesa ? h('p.peq', {}, editable ? 'Lo que añadas aquí lo verán todos los jugadores de la partida al crear o editar personajes.' : 'Lo ha añadido tu DM para esta partida.')

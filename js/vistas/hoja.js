@@ -640,7 +640,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       h('div.acciones', {},
         h('button.btn', { onclick: () => descargar(`${(pj.nombre || 'personaje').replace(/\W+/g, '_')}.json`, JSON.stringify(pj, null, 2)) }, '⬇ Exportar JSON'),
         h('button.btn', { onclick: () => window.print() }, '🖶 Imprimir'),
-        esMio(pj) && h('button.btn.rojo', { onclick: async () => { if (await confirmar('Borrar personaje', `¿Seguro que quieres borrar a ${pj.nombre || 'este personaje'}? No se puede deshacer.`, 'Borrar')) { await borrar(pj.id); irA('#/'); } } }, '🗑 Borrar'),
+        esMio(pj) && h('button.btn.rojo', { onclick: async () => { if (await confirmar('Borrar personaje', `¿Seguro que quieres borrar a ${pj.nombre || 'este personaje'}? No se puede deshacer.`, 'Borrar')) { await borrar(pj.id); irA('#/personajes'); } } }, '🗑 Borrar'),
       ),
     ];
   }

@@ -1,5 +1,7 @@
 # La Senda del Errante
 
+**Gratis, sin anuncios y sin registro obligatorio.** Al abrirla, la página de Inicio explica para qué sirve y cómo usar cada parte.
+
 Compañero de mesa para la 5.ª edición con las **reglas de 2024**, en español:
 
 - **Creador de personajes** paso a paso (clase → trasfondo → especie → características → habilidades → equipo → nivel), con conjunto estándar, compra de puntos o tiradas.
