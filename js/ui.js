@@ -148,3 +148,6 @@ export function descargar(nombre, texto, tipo = 'application/json') {
 const limpiezas = [];
 export const alSalir = (fn) => limpiezas.push(fn);
 export function limpiarPantalla() { while (limpiezas.length) { try { limpiezas.pop()(); } catch { /* */ } } }
+
+// Nombre de archivo para exportar: LSDE_Nombre (sin espacios ni símbolos raros)
+export const nombreArchivo = (nombre) => `LSDE_${String(nombre || 'Personaje').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '') || 'Personaje'}.json`;

@@ -39,7 +39,7 @@ export function vistaInicio(cont, irA) {
         h('div.acciones-principales', {},
           lista.length ? h('button.btn', { onclick: () => {
             const fecha = new Date().toISOString().slice(0, 10);
-            descargar(`Senda del Errante - personajes ${fecha}.json`, JSON.stringify({ app: 'La Senda del Errante', fecha, personajes: lista }, null, 2));
+            descargar(`LSDE_Todos_${fecha}.json`, JSON.stringify({ app: 'La Senda del Errante', fecha, personajes: lista }, null, 2));
             toast(`Copia de seguridad de ${lista.length} personaje(s) descargada.`);
           } }, '⬇ Exportar todos') : null,
           h('button.btn', { onclick: () => importar.click() }, '⬆ Importar'), importar,

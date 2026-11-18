@@ -1,5 +1,5 @@
 // Hoja de personaje viva
-import { h, textoLibre, toast, toastAccion, modal, confirmar, tirarD20, mostrarTirada, obtenerTirada, estadoDados, descargar } from '../ui.js';
+import { h, nombreArchivo, textoLibre, toast, toastAccion, modal, confirmar, tirarD20, mostrarTirada, obtenerTirada, estadoDados, descargar } from '../ui.js';
 import { CARACTERISTICAS, HABILIDADES, ESTADOS, AGOTAMIENTO, IDIOMAS_ESTANDAR, IDIOMAS_RAROS, PX, fmt, mod, habilidad } from '../datos/reglas.js';
 import { CLASES, clase } from '../datos/clases.js';
 import { ESPECIES, especie } from '../datos/especies.js';
@@ -96,7 +96,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
         h('button.btn.peq', { onclick: descansoCorto }, '☾ Desc. corto'),
         h('button.btn.peq', { onclick: descansoLargo }, '☀ Desc. largo'),
         pj.nivel < 20 && h('button.btn.peq.rojo', { onclick: subirNivel }, '⬆ Subir nivel'),
-        h('button.btn.peq', { title: 'Descargar una copia de esta hoja', onclick: () => { descargar(`${(pj.nombre || 'personaje').replace(/[^\wáéíóúñü -]+/gi, '_')}.json`, JSON.stringify(pj, null, 2)); toast('Copia descargada.'); } }, '⬇ Exportar'),
+        h('button.btn.peq', { title: 'Descargar una copia de esta hoja', onclick: () => { descargar(nombreArchivo(pj.nombre), JSON.stringify(pj, null, 2)); toast('Copia descargada.'); } }, '⬇ Exportar'),
       ),
     );
   }
@@ -639,7 +639,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
       h('h3', {}, 'Partida y copia de seguridad'),
       esMio(pj) ? partidaSelector() : null,
       h('div.acciones', {},
-        h('button.btn', { onclick: () => descargar(`${(pj.nombre || 'personaje').replace(/\W+/g, '_')}.json`, JSON.stringify(pj, null, 2)) }, '⬇ Exportar JSON'),
+        h('button.btn', { onclick: () => descargar(nombreArchivo(pj.nombre), JSON.stringify(pj, null, 2)) }, '⬇ Exportar JSON'),
         h('button.btn', { onclick: () => window.print() }, '🖶 Imprimir'),
         esMio(pj) && h('button.btn.rojo', { onclick: async () => { if (await confirmar('Borrar personaje', `¿Seguro que quieres borrar a ${pj.nombre || 'este personaje'}? No se puede deshacer.`, 'Borrar')) { await borrar(pj.id); irA('#/personajes'); } } }, '🗑 Borrar'),
       ),
