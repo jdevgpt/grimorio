@@ -96,6 +96,7 @@ export function vistaHoja(cont, pjOriginal, irA) {
         h('button.btn.peq', { onclick: descansoCorto }, '☾ Desc. corto'),
         h('button.btn.peq', { onclick: descansoLargo }, '☀ Desc. largo'),
         pj.nivel < 20 && h('button.btn.peq.rojo', { onclick: subirNivel }, '⬆ Subir nivel'),
+        h('button.btn.peq', { title: 'Descargar una copia de esta hoja', onclick: () => { descargar(`${(pj.nombre || 'personaje').replace(/[^\wáéíóúñü -]+/gi, '_')}.json`, JSON.stringify(pj, null, 2)); toast('Copia descargada.'); } }, '⬇ Exportar'),
       ),
     );
   }

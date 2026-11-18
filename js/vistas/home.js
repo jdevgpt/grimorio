@@ -139,7 +139,7 @@ export function vistaHome(cont, irA) {
 
     guia('💾', 'Copias de seguridad y privacidad',
       lista(
-        ['Sin cuenta, tus personajes se guardan ', b('solo en este dispositivo'), '. Haz copia con «⬇ Exportar JSON» (en «Editar y revisar») y recupérala con «⬆ Importar JSON».'],
+        ['Sin cuenta, tus personajes se guardan ', b('solo en este dispositivo'), '. Haz copia con «⬇ Exportar todos» en Personajes (o «⬇ Exportar» en la cabecera de cada hoja) y recupérala con «⬆ Importar JSON».'],
         ['Con cuenta de Google se guardan en la nube (Firebase) y los ves en cualquier móvil. Solo tú y el DM de tu partida podéis verlos.'],
         'La app no tiene anuncios ni rastreadores, y no vende ni comparte tus datos.',
       ),

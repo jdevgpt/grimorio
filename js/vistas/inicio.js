@@ -1,4 +1,4 @@
-import { h, toast } from '../ui.js';
+import { h, toast, descargar } from '../ui.js';
 import { clase } from '../datos/clases.js';
 import { especie } from '../datos/especies.js';
 import { calcular, validar } from '../motor.js';
@@ -9,10 +9,16 @@ export function vistaInicio(cont, irA) {
   const importar = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try {
-      const pj = JSON.parse(await f.text());
-      if (!pj.id || !pj.base) throw new Error();
-      pj.id = 'pj_' + Date.now().toString(36); pj.partida = null; pj.owner = null;
-      await guardar(pj, true); toast(`Importado: ${pj.nombre}`); irA(`#/pj/${pj.id}`);
+      const datos = JSON.parse(await f.text());
+      const pjs = Array.isArray(datos) ? datos : datos.personajes || [datos];
+      if (!pjs.length || pjs.some((x) => !x.id || !x.base)) throw new Error();
+      let ultimo = null;
+      for (const [i, pj] of pjs.entries()) {
+        pj.id = 'pj_' + Date.now().toString(36) + i; pj.partida = null; pj.partidaDm = null; pj.owner = null; delete pj.lectores;
+        await guardar(pj, true); ultimo = pj;
+      }
+      toast(pjs.length === 1 ? `Importado: ${ultimo.nombre}` : `${pjs.length} personajes importados`);
+      if (pjs.length === 1) irA(`#/pj/${ultimo.id}`); else vistaInicio(cont, irA);
     } catch { toast('El archivo no es una hoja válida de La Senda del Errante.'); }
   } });
   cont.replaceChildren(
@@ -24,6 +30,11 @@ export function vistaInicio(cont, irA) {
       h('div.acciones', {},
         h('button.btn.rojo', { onclick: () => irA('#/crear') }, '✦ Nuevo personaje'),
         h('button.btn', { onclick: () => importar.click() }, '⬆ Importar JSON'), importar,
+        lista.length ? h('button.btn', { onclick: () => {
+          const fecha = new Date().toISOString().slice(0, 10);
+          descargar(`Senda del Errante - personajes ${fecha}.json`, JSON.stringify({ app: 'La Senda del Errante', fecha, personajes: lista }, null, 2));
+          toast(`Copia de seguridad de ${lista.length} personaje(s) descargada.`);
+        } }, '⬇ Exportar todos') : null,
         h('button.btn', { onclick: () => irA('#/contenido') }, '📖 Contenido de mi libro'),
       ),
       lista.length ? h('div.lista-pj', {}, lista.map(tarjetaPJ(irA))) : h('div.vacio', {},
