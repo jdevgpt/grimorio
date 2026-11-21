@@ -3,7 +3,7 @@ import { h, toast, modal, confirmar, descargar, alSalir } from '../ui.js';
 import { estado, crearEnSub, escucharSub, gestionaIniciativa, puedeEscribirCronica, soyDMDe, fbListo } from '../almacen.js';
 import {
   listarAventuras, obtenerAventura, guardarAventura, borrarAventura, normalizarAventura,
-  leerProgreso, guardarProgreso, reiniciarProgreso, aventuraDePartida, vincularAventura, hayAventurasLocales, subirAventurasLocales,
+  leerProgreso, guardarProgreso, reiniciarProgreso, aventuraDePartida, vincularAventura, hayAventurasLocales, subirAventurasLocales, ultimoErrorCarga,
 } from '../datos/aventuras.js';
 
 const nombreArchivoAv = (t) => `LSDE_Aventura_${String(t || 'Aventura').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '')}.json`;
@@ -28,7 +28,7 @@ function botonImportar(alTerminar) {
 export async function vistaAventuras(cont, irA, id) {
   if (id) {
     const av = await obtenerAventura(id);
-    if (!av) { cont.replaceChildren(h('p.ayuda', {}, estado.listo ? 'No se encuentra esta aventura (ni en tu cuenta ni en este dispositivo).' : 'Cargando…')); return; }
+    if (!av) { const e = ultimoErrorCarga(); cont.replaceChildren(h('button.btn.peq', { onclick: () => irA('#/aventuras') }, '← Aventuras'), h('p.ayuda', {}, !estado.listo ? 'Cargando…' : e ? `No se pudo abrir la aventura desde tu cuenta (${e.code || e.message}). Revisa la conexión y que las reglas de Firestore estén publicadas.` : 'No se encuentra esta aventura (ni en tu cuenta ni en este dispositivo).')); return; }
     const caja = h('section.aventura');
     cont.replaceChildren(h('button.btn.peq', { onclick: () => irA('#/aventuras') }, '← Aventuras'), caja);
     return lectorAventura(caja, av, { irA });
@@ -325,6 +325,7 @@ function lectorAventura(caja, av, ctx) {
       h('div', {}, h('h2', {}, av.titulo), av.subtitulo ? h('p.peq', {}, av.subtitulo) : null,
         h('p.peq', {}, [av.nivel && `Nivel ${av.nivel}`, av.jugadores && `${av.jugadores} jugadores`, av.duracion, av.reglas].filter(Boolean).join(' · '))),
       h('button.btn.peq', { onclick: menu, title: 'Opciones' }, '⋯')),
+    av.avisoMapas ? h('div.aviso-caja', {}, av.avisoMapas) : null,
     relojMini, pest, cuerpo);
   pintar();
   alSalir(() => guardar());

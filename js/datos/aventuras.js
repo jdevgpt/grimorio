@@ -38,6 +38,8 @@ const idMapa = (mid) => String(mid).replace(/[^\w-]/g, '_');
 const enNube = () => fbListo();
 let cacheNube = null; // { uid, lista: [resumen + json] }
 const completas = new Map(); // id → aventura con mapas
+let errorCarga = null;
+export const ultimoErrorCarga = () => errorCarga;
 
 function separar(av) {
   const mapas = {};
@@ -68,18 +70,22 @@ export async function listarAventuras() {
 export const hayAventurasLocales = async () => (await locales()).length;
 
 export async function obtenerAventura(id) {
+  errorCarga = null;
   if (completas.has(id)) return completas.get(id);
   if (enNube()) {
     try {
       const d = (await listaNube()).find((x) => x.id === id);
       if (d) {
         const av = { ...JSON.parse(d.json), importada: d.importada, nube: true, progresoNube: d.progreso || null };
-        const imgs = av.mapas.some((m) => m.nube) ? await mapasAventuraNube(id) : {};
+        let imgs = {};
+        if (av.mapas.some((m) => m.nube)) {
+          try { imgs = await mapasAventuraNube(id); } catch (e) { console.warn('Mapas', e); av.avisoMapas = 'No se pudieron cargar los mapas de tu cuenta. El resto de la aventura funciona.'; }
+        }
         av.mapas = av.mapas.map((m) => ({ ...m, img: m.img || imgs[idMapa(m.id)] || '' }));
         completas.set(id, av);
         return av;
       }
-    } catch (e) { console.warn(e); }
+    } catch (e) { console.warn(e); errorCarga = e; }
   }
   const loc = (await locales()).find((a) => a.id === id);
   return loc ? { ...loc, nube: false } : null;
