@@ -72,6 +72,7 @@ export function modal(titulo, contenido, botones = [{ t: 'Cerrar' }], opciones =
     fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(null); });
     fondo.append(caja);
     document.body.append(fondo);
+    opciones.alAbrir?.(cerrar);
   });
 }
 

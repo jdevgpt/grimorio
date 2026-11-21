@@ -1,10 +1,11 @@
-import { h, toast, confirmar, pedirTexto } from '../ui.js';
+import { h, toast, confirmar, pedirTexto, modal } from '../ui.js';
 import { registrarNombre, guardarReglas, estado, entrar, salir, crearPartida, unirsePartida, borrarPartida, expulsar, personajesDePartida, misPersonajes, asignarPartida, hayLocales, subirLocales } from '../almacen.js';
 import { tarjetaPJ } from './inicio.js';
 import { vistaCronica } from './cronica.js';
 import { vistaIniciativa } from './iniciativa.js';
 import { vistaContenido } from './contenido.js';
 import { vistaAventuraPartida } from './aventuras.js';
+import { listarAventuras, normalizarAventura, guardarAventura, vincularAventura } from '../datos/aventuras.js';
 import { calcular } from '../motor.js';
 import { ESTADOS } from '../datos/reglas.js';
 import { REGLAS_MESA, conDefecto, textoRegla } from '../datos/opciones.js';
@@ -39,14 +40,57 @@ export function vistaPartidas(cont, irA, partidaId, sub) {
     locales ? h('div.aviso-caja', {}, h('p', {}, `Tienes ${locales} personaje(s) guardados solo en este dispositivo.`),
       h('button.btn.peq.rojo', { onclick: async () => { const n = await subirLocales(); toast(`${n} personaje(s) subidos a tu cuenta.`); } }, 'Subirlos a mi cuenta')) : null,
     h('h2', {}, 'Mis partidas'),
-    estado.partidas.length ? h('div.lista-partidas', {}, estado.partidas.map((p) => h('button.tarjeta-partida', { onclick: () => irA(`#/partidas/${p.id}`) },
-      h('strong', {}, p.nombre), h('span', {}, p.dm === estado.usuario.uid ? '★ Eres el DM' : `DM: ${p.dmNombre}`), h('small', {}, `${p.miembros.length} miembro(s)`)))) : h('p.peq', {}, 'Aún no estás en ninguna partida.'),
+    estado.partidas.length ? h('div.lista-partidas', {}, estado.partidas.map((p) => h('div.fila-borrable', {},
+      h('button.tarjeta-partida', { onclick: () => irA(`#/partidas/${p.id}`) },
+        h('strong', {}, p.nombre), h('span', {}, p.dm === estado.usuario.uid ? '★ Eres el DM' : `DM: ${p.dmNombre}`), h('small', {}, `${p.miembros.length} miembro(s)`)),
+      p.dm === estado.usuario.uid ? h('button.btn-borrar', { title: 'Borrar partida', 'aria-label': `Borrar ${p.nombre}`, onclick: async () => {
+        if (!(await confirmar('Borrar partida', `¿Borrar «${p.nombre}»? Las hojas de personaje no se borran (siguen siendo de sus jugadores) y la aventura sigue en «Mis aventuras».`, 'Borrar'))) return;
+        try { await borrarPartida(p.id); toast('Partida borrada.'); } catch (e) { toast('No se pudo borrar: ' + e.message); }
+      } }, '🗑') : null))) : h('p.peq', {}, 'Aún no estás en ninguna partida.'),
     h('div.acciones', {},
-      h('button.btn.rojo', { onclick: async () => { const n = await pedirTexto('Nueva partida', 'Nombre de la campaña'); if (n) { const id = await crearPartida(n); reglasAbiertas = id; toast('Partida creada. Ahora elige las reglas de la mesa.'); irA(`#/partidas/${id}`); } } }, '✦ Crear partida (DM)'),
+      h('button.btn.rojo', { onclick: () => nuevaPartida(irA) }, '✦ Crear partida (DM)'),
       h('button.btn', { onclick: async () => { const cod = await pedirTexto('Unirse a una partida', 'Código que te ha dado el DM'); if (!cod) return; try { const p = await unirsePartida(cod); toast(`Te has unido a ${p.nombre}`); irA(`#/partidas/${p.id}`); } catch (e) { toast(e.message); } } }, '⚑ Unirme con código'),
       h('button.btn', { onclick: () => irA('#/aventuras') }, '📜 Mis aventuras (DM)'),
     ),
   ));
+}
+
+// Crear partida: en blanco, importando el JSON de una aventura o con una de las aventuras ya guardadas
+async function nuevaPartida(irA) {
+  const crear = async (av) => {
+    const n = await pedirTexto('Nueva partida', 'Nombre de la campaña', av?.titulo || '');
+    if (!n) return;
+    const id = await crearPartida(n);
+    if (av) await vincularAventura({ id, aventura: null }, av.id);
+    reglasAbiertas = id;
+    toast(av ? `Partida creada con la aventura «${av.titulo}». Elige las reglas de la mesa; el guion está en la pestaña 📜 Aventura.` : 'Partida creada. Ahora elige las reglas de la mesa.', 6000);
+    irA(`#/partidas/${id}`);
+  };
+  const inp = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: async (e) => {
+    const f = e.target.files[0]; inp.remove(); if (!f) return;
+    try {
+      const av = normalizarAventura(JSON.parse(await f.text()));
+      toast('Guardando la aventura…');
+      try { await guardarAventura(av); } catch (err) { if (!err.guardadaLocal) throw err; toast(err.message, 6000); }
+      await crear(av);
+    } catch (err) { toast(err.message || 'No se pudo leer el archivo.'); }
+  } });
+  document.body.append(inp);
+  let cerrar = () => {};
+  const guardadas = await listarAventuras().catch(() => []);
+  const r = await modal('Nueva partida', h('div', {},
+    h('p', {}, '¿Cómo quieres empezar?'),
+    h('div.modal-botones.vertical', {},
+      h('button.btn', { onclick: () => cerrar('blanco') }, '✦ Partida en blanco'),
+      // El selector de archivos se abre aquí mismo (el móvil exige que sea al pulsar)
+      h('button.btn.rojo', { onclick: () => { inp.click(); cerrar('archivo'); } }, '⬆ Importar aventura (archivo JSON)'),
+    ),
+    guardadas.length ? h('p.peq', {}, 'O usa una de tus aventuras:') : null,
+    guardadas.length ? h('div.modal-botones.vertical', {}, guardadas.map((a) => h('button.btn', { onclick: () => cerrar(a) }, `📜 ${a.titulo}`))) : null,
+  ), [{ t: 'Cancelar', v: null }], { alAbrir: (c) => { cerrar = c; } });
+  if (r !== 'archivo') inp.remove();
+  if (r === 'blanco') return crear(null);
+  if (r && typeof r === 'object') return crear(r);
 }
 
 function vistaMesa(cont, irA, pid, sub) {
