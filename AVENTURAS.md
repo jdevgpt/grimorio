@@ -2,7 +2,11 @@
 
 En **Partidas → 📜 Mis aventuras** (o en la pestaña **📜 Aventura** de una partida, solo para el DM) se importa el guion de una aventura: un archivo `.json` con escenas, secretos, personajes, pistas, combates, reloj y mapas.
 
-Las aventuras se guardan **solo en el dispositivo del DM** (IndexedDB) y nunca se suben a la partida, así que los jugadores no pueden ver los secretos. El progreso (escena actual, pistas encontradas y estado del reloj) también se guarda en el dispositivo. Desde el menú **⋯** se puede exportar la aventura como copia de seguridad o reiniciar el progreso.
+Si has entrado con Google (en **Partidas**), la aventura se guarda **en tu cuenta**: la verás en todos tus dispositivos y nadie más puede leerla (ni los jugadores de tus partidas). El texto va en un documento y cada mapa en otro, para no pasar del límite de 1 MB por documento de Firestore. Sin sesión, se guarda solo en el dispositivo (IndexedDB); al entrar con Google aparece el botón **Subirlas a mi cuenta**.
+
+El progreso (escena actual, pistas encontradas y estado del reloj) se guarda con la aventura, y la partida recuerda qué aventura usa. Desde el menú **⋯** se puede exportar la aventura como copia de seguridad o reiniciar el progreso.
+
+Para guardar aventuras en la cuenta, las reglas de Firestore tienen que incluir el bloque `match /aventuras/{aid}` de [`firestore.rules`](firestore.rules) (ver [FIREBASE.md](FIREBASE.md)).
 
 ## Formato
 

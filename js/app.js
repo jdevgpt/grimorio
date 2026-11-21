@@ -56,7 +56,8 @@ function vistaAcerca() {
 window.addEventListener('hashchange', () => { scrollTo(0, 0); ruta(); });
 alCambiar(() => {
   const [, sec, , sub] = (location.hash || '#/').split('/');
-  if (sec === 'crear' || sec === 'compendio' || sec === 'dados' || sec === 'contenido' || sec === 'aventuras' || !sec) return;
+  if (sec === 'aventuras') { const f = `${estado.listo}|${estado.usuario?.uid || ''}`; if (f !== firmaSesion) { firmaSesion = f; ruta(); } return; } // al entrar o salir de la cuenta
+  if (sec === 'crear' || sec === 'compendio' || sec === 'dados' || sec === 'contenido' || !sec) return;
   if (sec === 'partidas' && sub === 'aventura') return; // la aventura no depende de los datos en tiempo real
   if (sec === 'partidas' && (sub === 'cronica' || sub === 'iniciativa') && !mesaCambiada()) return;
   const activo = document.activeElement;
@@ -64,6 +65,7 @@ alCambiar(() => {
   ruta();
 });
 
+let firmaSesion = '';
 // En crónica e iniciativa solo se repinta si cambian los datos de la propia partida (permisos, miembros…)
 let firmaMesa = '';
 function mesaCambiada() {
