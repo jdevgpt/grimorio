@@ -9,6 +9,7 @@ import { vistaDados } from './vistas/dados.js';
 import { vistaContenido } from './vistas/contenido.js';
 import { iniciarAlmanaque } from './estacion.js';
 import { vistaHome } from './vistas/home.js';
+import { vistaAventuras } from './vistas/aventuras.js';
 
 const vista = document.getElementById('vista');
 const irA = (hash) => { if (location.hash === hash) ruta(); else location.hash = hash; };
@@ -17,7 +18,7 @@ function ruta() {
   limpiarPantalla();
   estadoDados.fisicos = false;
   const [, sec, id, sub] = (location.hash || '#/').slice(1).split('/');
-  document.querySelectorAll('.nav-inf a').forEach((a) => a.classList.toggle('sel', a.dataset.sec === (sec === 'pj' || sec === 'crear' || sec === 'contenido' ? 'personajes' : sec || '')));
+  document.querySelectorAll('.nav-inf a').forEach((a) => a.classList.toggle('sel', a.dataset.sec === (sec === 'pj' || sec === 'crear' || sec === 'contenido' ? 'personajes' : sec === 'aventuras' ? 'partidas' : sec || '')));
   switch (sec) {
     case 'crear': return vistaCreador(vista, irA);
     case 'pj': {
@@ -31,6 +32,7 @@ function ruta() {
     case 'contenido': return vistaContenido(vista, irA, null);
     case 'acerca': return vistaAcerca();
     case 'personajes': return vistaInicio(vista, irA);
+    case 'aventuras': return vistaAventuras(vista, irA, id);
     default: return vistaHome(vista, irA);
   }
 }
@@ -54,7 +56,8 @@ function vistaAcerca() {
 window.addEventListener('hashchange', () => { scrollTo(0, 0); ruta(); });
 alCambiar(() => {
   const [, sec, , sub] = (location.hash || '#/').split('/');
-  if (sec === 'crear' || sec === 'compendio' || sec === 'dados' || sec === 'contenido' || !sec) return;
+  if (sec === 'crear' || sec === 'compendio' || sec === 'dados' || sec === 'contenido' || sec === 'aventuras' || !sec) return;
+  if (sec === 'partidas' && sub === 'aventura') return; // la aventura no depende de los datos en tiempo real
   if (sec === 'partidas' && (sub === 'cronica' || sub === 'iniciativa') && !mesaCambiada()) return;
   const activo = document.activeElement;
   if (document.querySelector('.modal-fondo') || (activo && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activo.tagName))) return;

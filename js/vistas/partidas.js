@@ -4,6 +4,7 @@ import { tarjetaPJ } from './inicio.js';
 import { vistaCronica } from './cronica.js';
 import { vistaIniciativa } from './iniciativa.js';
 import { vistaContenido } from './contenido.js';
+import { vistaAventuraPartida } from './aventuras.js';
 import { calcular } from '../motor.js';
 import { ESTADOS } from '../datos/reglas.js';
 import { REGLAS_MESA, conDefecto, textoRegla } from '../datos/opciones.js';
@@ -16,6 +17,7 @@ export function vistaPartidas(cont, irA, partidaId, sub) {
       h('h2', {}, 'Partidas compartidas'),
       h('p', {}, 'Para compartir hojas con tu grupo hay que conectar la app con Firebase (gratis). Mientras tanto, todo se guarda solo en este dispositivo.'),
       h('p.peq', {}, 'Instrucciones en el archivo FIREBASE.md del repositorio.'),
+      h('div.acciones', {}, h('button.btn', { onclick: () => irA('#/aventuras') }, '📜 Mis aventuras (DM)')),
     ));
     return;
   }
@@ -25,6 +27,7 @@ export function vistaPartidas(cont, irA, partidaId, sub) {
       h('h2', {}, 'Partidas compartidas'),
       h('p', {}, 'Entra con tu cuenta de Google. Cada jugador edita solo su hoja; el DM ve las de todos en tiempo real.'),
       h('button.btn.rojo.grande', { onclick: () => entrar().catch((e) => toast('No se pudo entrar: ' + e.message)) }, 'Entrar con Google'),
+      h('div.acciones.centradas', {}, h('button.btn', { onclick: () => irA('#/aventuras') }, '📜 Mis aventuras (DM)')),
     ));
     return;
   }
@@ -41,6 +44,7 @@ export function vistaPartidas(cont, irA, partidaId, sub) {
     h('div.acciones', {},
       h('button.btn.rojo', { onclick: async () => { const n = await pedirTexto('Nueva partida', 'Nombre de la campaña'); if (n) { const id = await crearPartida(n); reglasAbiertas = id; toast('Partida creada. Ahora elige las reglas de la mesa.'); irA(`#/partidas/${id}`); } } }, '✦ Crear partida (DM)'),
       h('button.btn', { onclick: async () => { const cod = await pedirTexto('Unirse a una partida', 'Código que te ha dado el DM'); if (!cod) return; try { const p = await unirsePartida(cod); toast(`Te has unido a ${p.nombre}`); irA(`#/partidas/${p.id}`); } catch (e) { toast(e.message); } } }, '⚑ Unirme con código'),
+      h('button.btn', { onclick: () => irA('#/aventuras') }, '📜 Mis aventuras (DM)'),
     ),
   ));
 }
@@ -49,12 +53,17 @@ function vistaMesa(cont, irA, pid, sub) {
   const p = estado.partidas.find((x) => x.id === pid);
   if (!p) { cont.replaceChildren(h('p.ayuda', {}, 'Cargando partida… (o no perteneces a ella)')); return; }
   registrarNombre(p);
-  const pestanas = h('nav.pestanas.mesa-pest', {}, [['', '⚑ Mesa'], ['cronica', '✒ Crónica'], ['iniciativa', '⚔ Iniciativa'], ['contenido', '📖 Libro']].map(([id, t]) =>
+  const pestanas = h('nav.pestanas.mesa-pest', {}, [['', '⚑ Mesa'], ['cronica', '✒ Crónica'], ['iniciativa', '⚔ Iniciativa'], ...(p.dm === estado.usuario.uid ? [['aventura', '📜 Aventura']] : []), ['contenido', '📖 Libro']].map(([id, t]) =>
     h('button' + ((sub || '') === id ? '.sel' : ''), { onclick: () => irA(`#/partidas/${pid}${id ? '/' + id : ''}`) }, t)));
   if (sub === 'contenido') {
     const cuerpo = h('div');
     cont.replaceChildren(h('section.mesa', {}, h('h2', {}, p.nombre), pestanas, cuerpo));
     return vistaContenido(cuerpo, irA, p);
+  }
+  if (sub === 'aventura') {
+    const cuerpo = h('div');
+    cont.replaceChildren(h('section.mesa', {}, h('button.btn.peq', { onclick: () => irA('#/partidas') }, '← Partidas'), h('h2', {}, p.nombre), pestanas, cuerpo));
+    return vistaAventuraPartida(cuerpo, irA, p);
   }
   if (sub === 'cronica' || sub === 'iniciativa') {
     const cuerpo = h('div');

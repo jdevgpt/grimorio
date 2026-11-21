@@ -626,3 +626,64 @@ a, button, summary, label { -webkit-tap-highlight-color: transparent; }
 .nav-inf a:active span { transform: scale(.92); }
 .nav-inf a span { transition: transform .1s; }
 
+
+/* ---------- Aventuras del DM ---------- */
+.lista-av { display: grid; gap: .6em; margin: .8em 0; }
+.tarjeta-av { display: flex; flex-direction: column; align-items: flex-start; gap: .15em; text-align: left; width: 100%; padding: .8em 1em; border: 1px solid var(--borde); border-radius: 10px; background: linear-gradient(180deg, #fffaf0, #f4e6c4); box-shadow: var(--sombra); font: inherit; color: inherit; cursor: pointer; }
+.tarjeta-av strong { font-family: var(--titulo); color: var(--lacre-2); font-size: 1.05rem; }
+.tarjeta-av span { color: var(--tinta-2); font-size: .9rem; }
+.av-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: .6em; }
+.av-cab h2 { margin-bottom: .1em; }
+.av-pest { position: static; margin: .4em -1em .6em; }
+.av-reloj-mini { margin-top: .4em; }
+.av-chips { margin: .3em 0 .6em; display: flex; flex-wrap: wrap; gap: .35em; }
+.av-escena h3 { margin-top: .4em; }
+.av-h { margin: 1.2em 0 .4em; color: var(--lacre-2); border-bottom: 1px dotted var(--borde); padding-bottom: .2em; }
+.av-leer { margin: .7em 0; padding: .7em .9em .7em 1em; border-left: 4px solid var(--oro); background: linear-gradient(90deg, #fbf0d3, #fffaf0); border-radius: 0 10px 10px 0; font-style: italic; }
+.av-leer.mini { font-size: .95rem; margin: .4em 0; }
+.av-leer-et { display: flex; justify-content: space-between; align-items: center; gap: .5em; font-style: normal; font-family: var(--titulo); font-size: .72rem; color: var(--oro); letter-spacing: .04em; margin-bottom: .2em; }
+.av-si { margin: .6em 0; padding: .5em .8em; border: 1px dashed var(--borde); border-radius: 8px; background: rgba(255, 252, 242, .6); }
+.av-si-cond { color: var(--lacre-2); }
+.av-dialogo { margin: .6em 0; padding: .5em .8em; border-radius: 10px; background: #f6ead0; }
+.av-quien { font-family: var(--titulo); font-size: .8rem; color: var(--tinta-2); }
+.av-dialogo p { font-style: italic; }
+.av-nota { font-size: .95rem; }
+.av-lista { padding-left: 1.3em; margin: .4em 0; }
+.av-lista li { margin: .25em 0; }
+.av-tabla-caja { overflow-x: auto; margin: .6em 0; }
+.av-tabla { border-collapse: collapse; width: 100%; font-size: .9rem; background: rgba(255, 252, 242, .6); }
+.av-tabla th, .av-tabla td { border: 1px solid var(--borde); padding: .35em .5em; text-align: left; vertical-align: top; }
+.av-tabla th { background: var(--perg-2); font-family: var(--titulo); font-size: .75rem; }
+.av-link { display: inline; border: 0; padding: .05em .4em; margin: 0 .1em; border-radius: 6px; font: inherit; font-size: .92em; font-style: normal; cursor: pointer; background: #ead7ad; color: var(--lacre-2); text-decoration: underline dotted; }
+.av-link.sec { background: #e6d3f0; color: #4a2763; }
+.av-link.pis { background: #f3e1b7; color: #6b4a10; }
+.av-link.pis.hallada { background: #d5e8cd; color: #2c5226; }
+.av-link.pnj { background: #e9dfcf; color: var(--tinta); }
+.av-pista { margin: .5em 0; padding: .5em .7em; border: 1px solid var(--borde); border-radius: 8px; background: rgba(255, 252, 242, .7); }
+.av-pista.hallada { background: #eaf3e3; border-color: #9cbf8f; }
+.av-pista-cab { display: flex; align-items: baseline; gap: .35em; flex-wrap: wrap; }
+.av-pista-cab input { width: 1.2em; height: 1.2em; transform: translateY(.15em); }
+.av-prueba { color: var(--tinta-2); font-size: .9rem; }
+.av-reloj-aviso, .av-comb-mini, .av-ir { display: flex; align-items: center; flex-wrap: wrap; gap: .4em; margin: .6em 0; padding: .45em .7em; border-radius: 8px; background: #f1e2c0; }
+.av-reloj-aviso { background: #f7d9c6; }
+.av-nav { display: flex; justify-content: space-between; gap: .6em; margin: 1.2em 0 .4em; }
+.av-secreto, .av-combate { margin: .5em 0; padding: .4em .8em; border: 1px solid var(--borde); border-radius: 10px; background: rgba(255, 252, 242, .7); }
+.av-secreto > summary, .av-combate > summary { cursor: pointer; padding: .3em 0; font-family: var(--titulo); font-size: .92rem; color: var(--lacre-2); }
+.av-reloj-total { font-size: 1.2rem; margin: .4em 0; }
+.av-reloj-total.peligro { color: var(--lacre); }
+.av-reloj { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .4em; margin: .6em 0; }
+.av-ficha-reloj { display: flex; align-items: center; gap: .4em; padding: .55em .6em; border: 1px solid var(--borde); border-radius: 8px; background: #e9e3d6; color: var(--tinta-3); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; min-height: 44px; }
+.av-ficha-reloj.on { background: linear-gradient(180deg, #fff1cf, #f6d58f); color: var(--tinta); border-color: var(--ambar); }
+.av-ficha-reloj .llama { width: 1.4em; text-align: center; }
+.av-mapas { display: grid; gap: .8em; }
+.av-mapa-mini { display: flex; flex-direction: column; gap: .3em; padding: .4em; border: 1px solid var(--borde); border-radius: 10px; background: #fffaf0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
+.av-mapa-mini img { width: 100%; height: auto; border-radius: 6px; display: block; }
+.av-mapa-grande { position: fixed; inset: 0; z-index: 100; background: rgba(20, 12, 6, .92); overflow: auto; display: flex; flex-direction: column; align-items: center; padding: 1em .5em calc(1em + env(safe-area-inset-bottom)); }
+.av-mapa-grande img { max-width: none; width: 160%; height: auto; }
+@media (min-width: 800px) { .av-mapa-grande img { width: auto; max-width: 100%; } }
+.av-mapa-pie { color: #f2e6c9; font-size: .9rem; margin-top: .6em; }
+.av-ficha p { margin: .35em 0; }
+.av-estad { margin-top: .6em; padding: .5em; border-top: 2px solid var(--lacre); background: #fbf3df; border-radius: 0 0 8px 8px; }
+.av-estad-fila { display: flex; flex-wrap: wrap; gap: .4em; margin-bottom: .4em; }
+.av-estad-fila span { display: flex; flex-direction: column; align-items: center; min-width: 3.2em; padding: .2em .4em; border: 1px solid var(--borde); border-radius: 6px; background: #fffaf0; }
+.av-estad-fila small { font-size: .7rem; }

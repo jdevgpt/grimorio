@@ -29,6 +29,7 @@ export function vistaHome(cont, irA) {
       [b('Crear personajes'), ' paso a paso con las reglas, o introducir la hoja que ya tienes en papel y comprobar que las cumple.'],
       [b('Llevar la hoja durante la partida'), ': puntos de golpe, estados, recursos, conjuros, descansos, subidas de nivel… con tiradas de dados incluidas.'],
       [b('Jugar en grupo'), ': el DM crea una partida, ve las hojas de todos en tiempo real, decide las reglas de la mesa, lleva la iniciativa y escribís juntos la crónica.'],
+      [b('Dirigir aventuras'), ': el DM carga el guion de una aventura con escenas, secretos, pistas, combates y mapas, y lo sigue desde la partida.'],
       [b('Consultar reglas'), ' rápidamente: estados, clases, especies, dotes, equipo y más de 300 conjuros con buscador.'],
     ),
     p('Es ', b('gratis'), ': no tiene anuncios, no cobra nada y puedes usarla sin cuenta. Solo necesitas entrar con Google si quieres compartir partidas con tu grupo.'),
@@ -110,6 +111,18 @@ export function vistaHome(cont, irA) {
 
     guia('✒', 'Crónica de la partida',
       p('Pestaña ', b('Crónica'), ' de la partida. El DM y los jugadores que él marque escriben la historia; los demás la ven ', b('mientras se escribe'), '. «Publicar» la deja fija, «Nueva sesión» añade un separador con la fecha y puedes descargarla entera.'),
+    ),
+
+    guia('📜', 'Aventuras para el DM',
+      p('Si diriges, puedes cargar el guion de una aventura (un archivo .json) y llevarlo en el móvil durante la partida. Se guarda ', b('solo en tu dispositivo'), ', así que los jugadores no lo ven.'),
+      pasos(
+        ['En ', b('Partidas'), ' pulsa «📜 Mis aventuras» e ', b('importa'), ' el archivo. O, dentro de tu partida, abre la pestaña ', b('📜 Aventura'), ' y elígela allí.'],
+        [b('Escenas'), ': el texto para leer en voz alta (con el botón «✒ A la crónica» para que los jugadores lo vean), las opciones «SI…», los diálogos y los enlaces a otras escenas, secretos, pistas y personajes.'],
+        [b('Secretos, Personajes y Pistas'), ': lo que solo sabe el DM, las fichas de cada personaje y la lista de pistas para ir marcando las que encuentran.'],
+        [b('Combates'), ': desde la partida, «⚔ Añadir a la iniciativa» mete a todos los enemigos de golpe; «💾 Guardar en la partida» los deja en Guardados para reutilizarlos.'],
+        [b('Reloj y mapas'), ': un contador de lo que se va agotando en la aventura y las láminas para enseñar (marcadas «para jugadores» o «solo DM»).'],
+      ),
+      p('El progreso (escena actual, pistas, reloj) se recuerda solo. Desde el menú ⋯ puedes exportar la aventura como copia de seguridad o reiniciarla. Cómo escribir tus propias aventuras: archivo AVENTURAS.md del repositorio.'),
     ),
 
     guia('⚔', 'Iniciativa y combates',
