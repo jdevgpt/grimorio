@@ -196,7 +196,8 @@ export async function aventurasNube() {
 }
 export async function mapasAventuraNube(aid) {
   const { db, f } = fb;
-  const snap = await f.getDocs(f.collection(db, 'aventuras', docAventura(aid), 'mapas'));
+  // El filtro por dueño es obligatorio: las reglas solo dejan leer los mapas propios
+  const snap = await f.getDocs(f.query(f.collection(db, 'aventuras', docAventura(aid), 'mapas'), f.where('owner', '==', estado.usuario.uid)));
   return Object.fromEntries(snap.docs.map((d) => [d.id, d.data().img]));
 }
 export async function guardarAventuraNube(datos, mapas) {
