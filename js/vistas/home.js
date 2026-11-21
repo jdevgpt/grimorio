@@ -114,7 +114,7 @@ export function vistaHome(cont, irA) {
     ),
 
     guia('📜', 'Aventuras para el DM',
-      p('Si diriges, puedes cargar el guion de una aventura (un archivo .json) y llevarlo en el móvil durante la partida. Se guarda ', b('solo en tu dispositivo'), ', así que los jugadores no lo ven.'),
+      p('Si diriges, puedes cargar el guion de una aventura (un archivo .json) y llevarlo en el móvil durante la partida. Si has entrado con Google se guarda ', b('en tu cuenta'), ' (la ves en todos tus dispositivos); los jugadores no pueden verla.'),
       pasos(
         ['En ', b('Partidas'), ' pulsa «📜 Mis aventuras» e ', b('importa'), ' el archivo. O, dentro de tu partida, abre la pestaña ', b('📜 Aventura'), ' y elígela allí.'],
         [b('Escenas'), ': el texto para leer en voz alta (con el botón «✒ A la crónica» para que los jugadores lo vean), las opciones «SI…», los diálogos y los enlaces a otras escenas, secretos, pistas y personajes.'],
@@ -122,7 +122,7 @@ export function vistaHome(cont, irA) {
         [b('Combates'), ': desde la partida, «⚔ Añadir a la iniciativa» mete a todos los enemigos de golpe; «💾 Guardar en la partida» los deja en Guardados para reutilizarlos.'],
         [b('Reloj y mapas'), ': un contador de lo que se va agotando en la aventura y las láminas para enseñar (marcadas «para jugadores» o «solo DM»).'],
       ),
-      p('El progreso (escena actual, pistas, reloj) se recuerda solo. Desde el menú ⋯ puedes exportar la aventura como copia de seguridad o reiniciarla. Cómo escribir tus propias aventuras: archivo AVENTURAS.md del repositorio.'),
+      p('El progreso (escena actual, pistas, reloj) se recuerda solo, también entre dispositivos. Desde el menú ⋯ puedes exportar la aventura como copia de seguridad o reiniciarla. Cómo escribir tus propias aventuras: archivo AVENTURAS.md del repositorio.'),
     ),
 
     guia('⚔', 'Iniciativa y combates',

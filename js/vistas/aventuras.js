@@ -1,9 +1,9 @@
 // Aventuras del DM: guion por escenas, secretos, personajes, pistas, combates, reloj y mapas.
 import { h, toast, modal, confirmar, descargar, alSalir } from '../ui.js';
-import { estado, crearEnSub, escucharSub, gestionaIniciativa, puedeEscribirCronica, soyDMDe } from '../almacen.js';
+import { estado, crearEnSub, escucharSub, gestionaIniciativa, puedeEscribirCronica, soyDMDe, fbListo } from '../almacen.js';
 import {
   listarAventuras, obtenerAventura, guardarAventura, borrarAventura, normalizarAventura,
-  leerProgreso, guardarProgreso, reiniciarProgreso, aventuraDePartida, vincularAventura,
+  leerProgreso, guardarProgreso, reiniciarProgreso, aventuraDePartida, vincularAventura, hayAventurasLocales, subirAventurasLocales,
 } from '../datos/aventuras.js';
 
 const nombreArchivoAv = (t) => `LSDE_Aventura_${String(t || 'Aventura').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w-]+/g, '_').replace(/^_+|_+$/g, '')}.json`;
@@ -15,8 +15,8 @@ function botonImportar(alTerminar) {
       const av = normalizarAventura(JSON.parse(await f.text()));
       const ya = await obtenerAventura(av.id);
       if (ya && !(await confirmar('Reemplazar aventura', `Ya tienes «${ya.titulo}». ¿Quieres reemplazarla por la del archivo? Tu progreso (escena, pistas, reloj) se conserva.`, 'Reemplazar'))) return;
-      await guardarAventura(av);
-      toast(`Aventura importada: ${av.titulo}`);
+      try { await guardarAventura(av); toast(fbListo() ? `Aventura guardada en tu cuenta: ${av.titulo}` : `Aventura importada en este dispositivo: ${av.titulo}`); }
+      catch (err) { if (!err.guardadaLocal) throw err; toast(err.message, 6000); }
       alTerminar(av);
     } catch (err) { toast(err.message || 'No se pudo leer el archivo.'); }
     inp.value = '';
@@ -28,19 +28,24 @@ function botonImportar(alTerminar) {
 export async function vistaAventuras(cont, irA, id) {
   if (id) {
     const av = await obtenerAventura(id);
-    if (!av) { cont.replaceChildren(h('p.ayuda', {}, 'No se encuentra esta aventura en este dispositivo.')); return; }
+    if (!av) { cont.replaceChildren(h('p.ayuda', {}, estado.listo ? 'No se encuentra esta aventura (ni en tu cuenta ni en este dispositivo).' : 'Cargando…')); return; }
     const caja = h('section.aventura');
     cont.replaceChildren(h('button.btn.peq', { onclick: () => irA('#/aventuras') }, '← Aventuras'), caja);
     return lectorAventura(caja, av, { irA });
   }
   const lista = await listarAventuras();
+  const nLocales = await hayAventurasLocales();
   cont.replaceChildren(h('section.aventuras', {},
     h('h2', {}, 'Mis aventuras'),
-    h('p.ayuda', {}, 'Guiones para dirigir: escenas con el texto para leer en voz alta, secretos del DM, personajes, pistas, combates y mapas. Se guardan solo en este dispositivo para que nadie más los vea.'),
+    h('p.ayuda', {}, 'Guiones para dirigir: escenas con el texto para leer en voz alta, secretos del DM, personajes, pistas, combates y mapas. Solo los ves tú.'),
+    fbListo() ? h('p.peq', {}, `☁ Se guardan en tu cuenta (${estado.usuario.nombre}) y las verás en todos tus dispositivos.`)
+      : h('p.peq', {}, '📱 Ahora se guardan solo en este dispositivo. Entra con Google en Partidas para guardarlas en tu cuenta.'),
+    nLocales && fbListo() ? h('div.aviso-caja', {}, h('p', {}, `Tienes ${nLocales} aventura(s) guardadas solo en este dispositivo.`),
+      h('button.btn.peq.rojo', { onclick: async () => { try { const n = await subirAventurasLocales(); toast(`${n} aventura(s) subidas a tu cuenta.`); } catch (e) { toast(e.message, 6000); } vistaAventuras(cont, irA); } }, 'Subirlas a mi cuenta')) : null,
     lista.length ? h('div.lista-av', {}, lista.map((av) => h('button.tarjeta-av', { onclick: () => irA(`#/aventuras/${av.id}`) },
       h('strong', {}, av.titulo),
       av.subtitulo ? h('span', {}, av.subtitulo) : null,
-      h('small', {}, [av.nivel && `Nivel ${av.nivel}`, av.jugadores && `${av.jugadores} jugadores`, av.duracion, `${av.escenas.length} escenas`].filter(Boolean).join(' · '))))) : h('div.vacio', {},
+      h('small', {}, [av.nube ? '☁ En tu cuenta' : '📱 Este dispositivo', av.nivel && `Nivel ${av.nivel}`, av.jugadores && `${av.jugadores} jugadores`, av.duracion, `${av.escenas.length} escenas`].filter(Boolean).join(' · '))))) : h('div.vacio', {},
       h('p', {}, 'Aún no tienes ninguna aventura.'),
       h('p.peq', {}, 'Importa el archivo .json de una aventura. Si la vas a dirigir en una partida, también puedes hacerlo desde la pestaña «Aventura» de la partida.')),
     h('div.acciones-principales', {}, ...botonImportar((av) => irA(`#/aventuras/${av.id}`))),
@@ -50,19 +55,19 @@ export async function vistaAventuras(cont, irA, id) {
 // ---------- Pestaña «Aventura» dentro de una partida (solo DM) ----------
 export async function vistaAventuraPartida(cont, irA, p) {
   if (!soyDMDe(p)) { cont.replaceChildren(h('p.ayuda', {}, 'Solo el DM ve la aventura.')); return; }
-  const aid = aventuraDePartida(p.id);
+  const aid = aventuraDePartida(p);
   const av = aid ? await obtenerAventura(aid) : null;
   if (av) {
     const caja = h('section.aventura');
     cont.replaceChildren(caja);
-    return lectorAventura(caja, av, { irA, partida: p, alDesvincular: () => { vincularAventura(p.id, null); vistaAventuraPartida(cont, irA, p); } });
+    return lectorAventura(caja, av, { irA, partida: p, alDesvincular: async () => { await vincularAventura(p, null); vistaAventuraPartida(cont, irA, p); } });
   }
   const lista = await listarAventuras();
   cont.replaceChildren(h('div', {},
-    h('p.ayuda', {}, 'Elige la aventura que vas a dirigir en esta partida. Solo la ves tú, y solo en este dispositivo.'),
-    lista.length ? h('div.lista-av', {}, lista.map((x) => h('button.tarjeta-av', { onclick: () => { vincularAventura(p.id, x.id); vistaAventuraPartida(cont, irA, p); } },
-      h('strong', {}, x.titulo), x.subtitulo ? h('span', {}, x.subtitulo) : null))) : h('p.peq', {}, 'No tienes aventuras en este dispositivo.'),
-    h('div.acciones-principales', {}, ...botonImportar((x) => { vincularAventura(p.id, x.id); vistaAventuraPartida(cont, irA, p); })),
+    h('p.ayuda', {}, 'Elige la aventura que vas a dirigir en esta partida. Solo la ves tú.'),
+    lista.length ? h('div.lista-av', {}, lista.map((x) => h('button.tarjeta-av', { onclick: async () => { await vincularAventura(p, x.id); vistaAventuraPartida(cont, irA, p); } },
+      h('strong', {}, x.titulo), x.subtitulo ? h('span', {}, x.subtitulo) : null, h('small', {}, x.nube ? '☁ En tu cuenta' : '📱 Este dispositivo')))) : h('p.peq', {}, 'Aún no tienes aventuras. Importa una:'),
+    h('div.acciones-principales', {}, ...botonImportar(async (x) => { await vincularAventura(p, x.id); vistaAventuraPartida(cont, irA, p); })),
   ));
 }
 
@@ -306,13 +311,13 @@ function lectorAventura(caja, av, ctx) {
       { t: '⬇ Exportar (copia de seguridad)', v: 'exp' },
       { t: '↺ Reiniciar progreso (escena, pistas, reloj)', v: 'rei' },
       ctx.alDesvincular ? { t: '⇄ Usar otra aventura en esta partida', v: 'desv' } : null,
-      { t: '🗑 Borrar de este dispositivo', v: 'borrar', clase: 'rojo' },
+      { t: av.nube ? '🗑 Borrar de mi cuenta' : '🗑 Borrar de este dispositivo', v: 'borrar', clase: 'rojo' },
       { t: 'Cerrar', v: null },
     ].filter(Boolean), { vertical: true });
-    if (r === 'exp') { const { importada, ...limpio } = av; descargar(nombreArchivoAv(av.titulo), JSON.stringify(limpio, null, 1)); toast('Aventura descargada.'); }
+    if (r === 'exp') { const { importada, nube, progresoNube, ...limpio } = av; descargar(nombreArchivoAv(av.titulo), JSON.stringify(limpio, null, 1)); toast('Aventura descargada.'); }
     if (r === 'rei' && await confirmar('Reiniciar progreso', 'Vuelve a la primera escena, desmarca las pistas y deja el reloj como al principio.', 'Reiniciar')) { reiniciarProgreso(av); Object.assign(prog, leerProgreso(av)); pintar(); }
     if (r === 'desv') ctx.alDesvincular();
-    if (r === 'borrar' && await confirmar('Borrar aventura', `Se borrará «${av.titulo}» de este dispositivo. Si no tienes una copia del archivo, no podrás recuperarla.`, 'Borrar')) { await borrarAventura(av.id); toast('Aventura borrada.'); if (ctx.alDesvincular) ctx.alDesvincular(); else ctx.irA('#/aventuras'); }
+    if (r === 'borrar' && await confirmar('Borrar aventura', `Se borrará «${av.titulo}» ${av.nube ? 'de tu cuenta (en todos tus dispositivos)' : 'de este dispositivo'}. Si no tienes una copia del archivo, no podrás recuperarla.`, 'Borrar')) { await borrarAventura(av); toast('Aventura borrada.'); if (ctx.alDesvincular) ctx.alDesvincular(); else ctx.irA('#/aventuras'); }
   };
 
   caja.replaceChildren(

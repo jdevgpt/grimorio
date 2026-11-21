@@ -10,6 +10,9 @@ Solo hay que hacerlo una vez. Es gratis para un grupo de juego.
 6. Pulsa el engranaje **Configuración del proyecto → Tus apps → icono web `</>`**. Ponle de nombre `Senda` (sin Hosting) y copia el bloque `firebaseConfig`.
 7. Pega ese bloque en [`js/firebase-config.js`](js/firebase-config.js) (o pásaselo a Claude). Estos datos no son secretos: la seguridad la ponen las reglas del paso 5.
 
+## Cuando cambian las reglas
+Si la app añade funciones nuevas que guardan datos (por ejemplo, las **aventuras del DM**), hay que volver a copiar [`firestore.rules`](firestore.rules) en **Firestore → Reglas** y pulsar **Publicar**. Hasta entonces, esas cosas se guardan solo en el dispositivo.
+
 ## Cómo se usa
 - **DM**: Partidas → Entrar con Google → *Crear partida*. Comparte el código de 6 letras.
 - **Jugadores**: Partidas → Entrar con Google → *Unirme con código*, y después unen su personaje a la partida.

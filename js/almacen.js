@@ -184,3 +184,31 @@ export const nombreDe = (p, uid) => p.nombres?.[uid] || (uid === p.dm ? p.dmNomb
 export const soyDMDe = (p) => estado.usuario?.uid === p.dm;
 export const puedeEscribirCronica = (p) => soyDMDe(p) || (p.escritores || []).includes(estado.usuario?.uid);
 export const gestionaIniciativa = (p) => soyDMDe(p) || (p.gestoresIni || []).includes(estado.usuario?.uid);
+
+// ---------- Aventuras del DM en su cuenta ----------
+// El texto va como JSON en el documento principal (Firestore no admite listas dentro de listas)
+// y cada mapa en su propio documento, para no pasar del límite de 1 MB por documento.
+export const docAventura = (aid) => `${estado.usuario.uid}_${aid}`.replace(/[^\w-]/g, '_');
+export async function aventurasNube() {
+  const { db, f } = fb;
+  const snap = await f.getDocs(f.query(f.collection(db, 'aventuras'), f.where('owner', '==', estado.usuario.uid)));
+  return snap.docs.map((d) => d.data());
+}
+export async function mapasAventuraNube(aid) {
+  const { db, f } = fb;
+  const snap = await f.getDocs(f.collection(db, 'aventuras', docAventura(aid), 'mapas'));
+  return Object.fromEntries(snap.docs.map((d) => [d.id, d.data().img]));
+}
+export async function guardarAventuraNube(datos, mapas) {
+  const { db, f } = fb; const id = docAventura(datos.id);
+  for (const [mid, img] of Object.entries(mapas || {})) {
+    await f.setDoc(f.doc(db, 'aventuras', id, 'mapas', mid.replace(/[^\w-]/g, '_')), { owner: estado.usuario.uid, img });
+  }
+  await f.setDoc(f.doc(db, 'aventuras', id), { ...datos, owner: estado.usuario.uid });
+}
+export async function borrarAventuraNube(aid, idsMapas = []) {
+  const { db, f } = fb; const id = docAventura(aid);
+  for (const mid of idsMapas) await f.deleteDoc(f.doc(db, 'aventuras', id, 'mapas', mid.replace(/[^\w-]/g, '_'))).catch(() => {});
+  await f.deleteDoc(f.doc(db, 'aventuras', id));
+}
+export const progresoAventuraNube = (aid, progreso) => fb.f.updateDoc(fb.f.doc(fb.db, 'aventuras', docAventura(aid)), { progreso });

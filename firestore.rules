@@ -55,6 +55,18 @@ service cloud.firestore {
       }
     }
 
+    // Aventuras del DM: solo las ve y las cambia quien las importó.
+    match /aventuras/{aid} {
+      allow read, delete: if request.auth != null && resource.data.owner == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid && request.resource.data.owner == request.auth.uid;
+      match /mapas/{mid} {
+        allow read, delete: if request.auth != null && resource.data.owner == request.auth.uid;
+        allow create, update: if request.auth != null && request.resource.data.owner == request.auth.uid
+          && (resource == null || resource.data.owner == request.auth.uid);
+      }
+    }
+
     // Personajes: cada jugador escribe solo los suyos; los lee él y el DM de su partida.
     match /personajes/{id} {
       allow read: if request.auth != null && request.auth.uid in resource.data.lectores;
