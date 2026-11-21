@@ -687,3 +687,9 @@ a, button, summary, label { -webkit-tap-highlight-color: transparent; }
 .av-estad-fila { display: flex; flex-wrap: wrap; gap: .4em; margin-bottom: .4em; }
 .av-estad-fila span { display: flex; flex-direction: column; align-items: center; min-width: 3.2em; padding: .2em .4em; border: 1px solid var(--borde); border-radius: 6px; background: #fffaf0; }
 .av-estad-fila small { font-size: .7rem; }
+
+/* Tarjetas con papelera */
+.fila-borrable { display: flex; align-items: stretch; gap: .4em; }
+.fila-borrable > .tarjeta-partida, .fila-borrable > .tarjeta-av { flex: 1; min-width: 0; }
+.btn-borrar { flex: none; width: 2.8em; border: 1px solid var(--borde); border-radius: 10px; background: #fff6ea; font-size: 1.15rem; cursor: pointer; }
+.btn-borrar:hover, .btn-borrar:focus-visible { background: #f6d9cf; border-color: var(--lacre-2); }

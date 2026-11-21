@@ -42,10 +42,15 @@ export async function vistaAventuras(cont, irA, id) {
       : h('p.peq', {}, '📱 Ahora se guardan solo en este dispositivo. Entra con Google en Partidas para guardarlas en tu cuenta.'),
     nLocales && fbListo() ? h('div.aviso-caja', {}, h('p', {}, `Tienes ${nLocales} aventura(s) guardadas solo en este dispositivo.`),
       h('button.btn.peq.rojo', { onclick: async () => { try { const n = await subirAventurasLocales(); toast(`${n} aventura(s) subidas a tu cuenta.`); } catch (e) { toast(e.message, 6000); } vistaAventuras(cont, irA); } }, 'Subirlas a mi cuenta')) : null,
-    lista.length ? h('div.lista-av', {}, lista.map((av) => h('button.tarjeta-av', { onclick: () => irA(`#/aventuras/${av.id}`) },
+    lista.length ? h('div.lista-av', {}, lista.map((av) => h('div.fila-borrable', {}, h('button.tarjeta-av', { onclick: () => irA(`#/aventuras/${av.id}`) },
       h('strong', {}, av.titulo),
       av.subtitulo ? h('span', {}, av.subtitulo) : null,
-      h('small', {}, [av.nube ? '☁ En tu cuenta' : '📱 Este dispositivo', av.nivel && `Nivel ${av.nivel}`, av.jugadores && `${av.jugadores} jugadores`, av.duracion, `${av.escenas.length} escenas`].filter(Boolean).join(' · '))))) : h('div.vacio', {},
+      h('small', {}, [av.nube ? '☁ En tu cuenta' : '📱 Este dispositivo', av.nivel && `Nivel ${av.nivel}`, av.jugadores && `${av.jugadores} jugadores`, av.duracion, `${av.escenas?.length || 0} escenas`].filter(Boolean).join(' · '))),
+      h('button.btn-borrar', { title: 'Borrar aventura', 'aria-label': `Borrar ${av.titulo}`, onclick: async () => {
+        if (!(await confirmar('Borrar aventura', `¿Borrar «${av.titulo}» ${av.nube ? 'de tu cuenta (en todos tus dispositivos)' : 'de este dispositivo'}? Si no guardas el archivo .json, no podrás recuperarla.`, 'Borrar'))) return;
+        try { await borrarAventura((await obtenerAventura(av.id)) || av); toast('Aventura borrada.'); } catch (e) { toast('No se pudo borrar: ' + (e.code || e.message)); }
+        vistaAventuras(cont, irA);
+      } }, '🗑')))) : h('div.vacio', {},
       h('p', {}, 'Aún no tienes ninguna aventura.'),
       h('p.peq', {}, 'Importa el archivo .json de una aventura. Si la vas a dirigir en una partida, también puedes hacerlo desde la pestaña «Aventura» de la partida.')),
     h('div.acciones-principales', {}, ...botonImportar((av) => irA(`#/aventuras/${av.id}`))),
